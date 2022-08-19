@@ -1,0 +1,6 @@
+first line==> Number of events,number of rooms,number of features,number of students
+
+* Next lines are rooms
+* Next lines are events/student
+* Next features/event
+* Next features/room
