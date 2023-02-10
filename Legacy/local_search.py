@@ -1,4 +1,4 @@
-from pe import Problem,Solution
+from Legacy.pe import Problem,Solution
 import logging
 from datetime import datetime
 from time import time

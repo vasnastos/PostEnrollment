@@ -3,7 +3,7 @@ from docplex.mp.model import Model
 import docplex.cp.model as cpx
 import os
 
-from pe import Problem,PPD,D,P
+from Legacy.pe import Problem,PPD,D,P
 
 def hints(problem,eset,solution):
     shints={student_id:{p:False for p in range(P)} for student_id in problem.students.keys()}
