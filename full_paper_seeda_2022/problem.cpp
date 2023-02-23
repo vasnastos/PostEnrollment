@@ -149,7 +149,7 @@ Problem::Problem(string filename,string formulationN):P(45)
                 getline(fp,line);
                 if(stoi(line)==1)
                 {
-                    this->events[eid].add_period(pid);
+                    this->event_periods[eid].emplace_back(pid);
                 }
             }
         }
@@ -173,9 +173,38 @@ Problem::Problem(string filename,string formulationN):P(45)
             }
         }
     }
+    fp.close();
+
+    for(int eid=0;eid<this->E;eid++)
+    {
+        for(int rid=0;rid<this->R;rid++)
+        {
+            if(std::includes(this->rooms[rid].features.begin(),this->rooms[rid].features.end(),this->events[eid].features.begin(),this->events[eid].features.end()))
+            {
+                this->suitable_rooms[eid].emplace_back(rid);
+            }
+        }
+    }
+
+
+
 }
 
 Problem::~Problem() {}
+
+void Problem::create_graph()
+{
+    std::set <int> common_students;
+    for(int eid=0;eid<this->E;eid++)
+    {
+        for(int eid2=eid+1;eid2<this->E;eid2++)
+        {
+            common_students.clear();
+            std::set_intersection(this->events[eid].students.begin(),this->events[eid].students.end(),this->events[eid2].students.begin(),this->events[eid2].students.end(),common_students.begin());
+            if(common_students.size()>0)
+        }
+    }
+}
 
 void Problem::set_formulation(string formulation_name)
 {
@@ -187,7 +216,18 @@ string Problem::get_formulation()const {return this->formulation;}
 
 double Problem::density()const
 {
-
+    int d=0;
+    for(int i=0;i<this->E;i++)
+    {
+        for(int j=i+1;j<this->E;j++)
+        {
+            if(this->G.has_edge(i,j))
+            {
+                d++;
+            }
+        }
+    }
+    return (d*2)/pow(static_cast<double>(this->E),2);
 }
 
 double Problem::room_suitability()const 

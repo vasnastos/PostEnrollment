@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cassert>
 #include <set>
+#include <cmath>
+#include "graph.hpp"
 
 using namespace std;
 
@@ -16,11 +18,10 @@ class Event
         int id;
         vector <int> students;
         set <int> features;
-        vector <int> periods;
+
         Event(int exam_index);
         void add_student(int sid);
         void add_feature(int fid);
-        void add_period(int pid);
         bool operator==(const int candicate_id);
         string to_string()const;
 };
@@ -45,20 +46,23 @@ class Problem
     private:
         vector <Event> events;
         map <int,vector <int>> students;
-        vector <int,vector <int>> suitable_rooms;
-        vector <int,vector <int>> event_periods; 
+        map <int,vector <int>> suitable_rooms;
+        map <int,vector <int>> event_periods; 
         map <int,vector <int>> after_events;
         
+    public:
         vector <Room> rooms;
         string formulation;
+        Graph <int> G;
         int E;
         int F;
         int R;
         int S;
         int P;
-    public:
+
         Problem(string filename,string formulationN);
         ~Problem();
+        void create_graph();
         
         // setters/getters
         void set_formulation(string formulation_name);
