@@ -175,7 +175,6 @@ map <int,pair <int,int>> Solution::regroup()
     uniform_int_distribution <int> random_period(0,this->problem->P);
     auto new_timeslot=random_period(rnde);
 
-
     // Identify similar events possibly KMeans
     
 }
