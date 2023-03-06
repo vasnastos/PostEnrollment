@@ -2,6 +2,8 @@ import pe
 from collections import defaultdict
 import random,time
 
+from queue import LifoQueue
+
 
 class Solution:
     def __init__(self,ds_name):
@@ -10,11 +12,6 @@ class Solution:
         self.periodwise_solutions=defaultdict(list)
         self.room_period_availability=defaultdict(dict)
         self.cost=0
-
-        for pid in range(self.R):
-            for rid in range(self.P):
-                self.room_period_availability[rid][pid]=False
-
         random.seed(time.time())
         self.problem=pe.Problem()
     
@@ -27,12 +24,17 @@ class Solution:
     def can_be_moved(self,event_id,period_id,excluded=[]):
         for neighbor_id in self.problem.G.neighbors(event_id):
             if neighbor_id in excluded: continue
-            if self.solution_set[event_id][0]==self.solution_set[neighbor_id][0]:
+            if period_id==self.solution_set[neighbor_id][0]:
                 return False
         return True
 
     def room_available(self,period_id,room_id,excluded=[]):
-        return self.room_period_availability[period_id][room_id]
+        for event_id in self.roomwise_solutions[room_id]:
+            if event_id in excluded:
+                continue
+            if period_id==self.solution_set[event_id][0]:
+                return False
+        return True
 
     def transfer_event(self):
         event_id=random.rand_int(0,self.problem.E-1)
@@ -106,7 +108,44 @@ class Solution:
         return potential_move
 
     def kempe_chain(self):
-        pass
+        kc=LifoQueue()
+        event_id1=random.randint(0,self.problem.E-1)
+        eneighbors=self.problem.G.neighbors(event_id1)
+        while len(eneighbors)==0:
+            event_id1=random.randint(0,self.problem.E-1)
+            eneighbors=self.problem.G.neighbors(event_id1)
+
+        event_id2=eneighbors[random.randint(0,len(eneighbors)-1)]
+        
+        versus_periods={
+            self.solution_set[event_id1][0]:self.solution_set[event_id2][0],
+            self.solution_set[event_id2][0]:self.solution_set[event_id1][0]
+        }
+
+        moves=dict()
+        kc.put(event_id1)
+        while not kc.empty():
+            current_event=kc.get()
+            current_period=self.solution_set[current_event][0]
+            new_period=versus_periods[current_period]
+            moves[current_event]=new_period
+            eneighbors=self.problem.G.neioghbors(current_event)
+            for neighbor in eneighbors:
+                if neighbor in moves: continue
+                if self.solution_set[neighbor][0]==new_period:
+                    kc.put(neighbor)
+        
+        potential_solution={}
+        for event_id,period_id in moves.items():
+            found=False
+            for room_id in range(self.problem.R):
+                if self.room_available(period_id,room_id,excluded=[event_id]):
+                    potential_solution[event_id]=(period_id,room_id)
+            if not found:
+                return dict()
+        return potential_solution            
+
+
 
 
 
