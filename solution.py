@@ -83,7 +83,6 @@ class Solution:
 
                 # 3. Find a suitable room
                 else:
-                    potential_move={}
                     # event_id1 room
                     for room_id in self.problem.event_available_rooms[event_id]:
                         if room_id in [self.solution_set[event_id][1],self.solution_set[event_id2]]:
@@ -143,10 +142,7 @@ class Solution:
                     potential_solution[event_id]=(period_id,room_id)
             if not found:
                 return dict()
-        return potential_solution            
-
-
-
+        return potential_solution
 
 
 if __name__=='__main__':

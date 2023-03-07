@@ -2,9 +2,10 @@ import os
 from collections import defaultdict
 from enum import Enum
 import networkx as nx
+from itertools import combinations
 from rich.console import Console
 
-class Problem_Formulation(Enum):
+class PRF(Enum):
     TTCOMP2002=1,
     ITC2007=2,
     HarderLewisPaechter=3,
@@ -12,17 +13,7 @@ class Problem_Formulation(Enum):
 
     @staticmethod
     def has_extra_constraints(problem_formulation):
-        return problem_formulation==Problem_Formulation.ITC2007 or problem_formulation==Problem_Formulation.HarderLewisPaechter
-
-class Core:
-    days=5
-    periods=9
-    P=5*9
-    category=dict()
-
-    @staticmethod
-    def load_info():
-        pass
+        return problem_formulation==PRF.ITC2007 or problem_formulation==PRF.HarderLewisPaechter
 
 
 class Problem:
@@ -34,6 +25,11 @@ class Problem:
         self.event_available_periods=defaultdict(list)
         self.event_available_rooms=defaultdict(list)
         self.formulation=None
+        self.days=5
+        self.periods_per_day=9
+        self.P=self.days * self.periods_per_day
+
+        self.last_period_per_day=[day*self.periods_per_day+self.periods_per_day-1 for day in range(self.days)]
 
         self.E=-1
         self.R=-1
@@ -50,6 +46,7 @@ class Problem:
             self.E,self.R,self.F,self.S=[int(x) for x in RF.readline().strip().split()]
             self.events={eid:{"S":set(),"F":set(),"HPE":list()} for eid in range(self.E)}
             self.rooms={rid:{"C":-1,"F":set()} for rid in range(self.R)}
+            self.event_combinations=dict()
 
             # Room-capacity relations
             for rid in range(self.R):
@@ -74,7 +71,7 @@ class Problem:
                     if int(RF.readline().strip()==1):
                         self.events[eid]['F'].add(fid)
             
-            if Problem_Formulation.has_extra_constraints(self.formulation):
+            if PRF.has_extra_constraints(self.formulation):
                 # 5. Event-Period availability
                 for eid in range(self.E):
                     for pid in range(self.P):
@@ -109,11 +106,15 @@ class Problem:
                 
                 elif self.event_available_rooms[eid]==self.event_available_rooms[eidn] and len(self.event_available_rooms[eid])==1:
                     self.G.add_edge(eid,eidn,weight=1)
+        
+        for events in self.students.values():
+            for combination in combinations(events):
+                self.event_combinations[frozenset(combination)]=self.event_combinations[frozenset(combination)]+1
     
     def statistics(self):
         self.conflict_density=nx.density(self.G)
         self.average_room_size=sum([self.rooms[rid]['C'] for rid in range(self.R)])/self.R
-        self.average_event_period_unavailability=sum([Core.P-len(self.event_available_periods[eid]) for eid in range(self.E)])/(self.E*Core.P)
+        self.average_event_period_unavailability=sum([self.P-len(self.event_available_periods[eid]) for eid in range(self.E)])/(self.E*self.P)
         self.average_room_suitability=sum([len(self.event_available_rooms[eid]) for eid in range(self.E)])/(self.R*self.E)
 
         console=Console()
