@@ -239,7 +239,8 @@ def day_by_day(problem:"Problem",day:int,solution_hint:dict,timesol=60):
 def timeslot_block_reassignment(problem:Problem,events_in_timeblock:list,frozen_periods:list,solution_hint=None,timesol=60):
     model=cp_model.CpModel()
     xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in events_in_timeblock for room_id in range(problem.R) for period_id in range(problem.P)}
-    
+    partial_students_set=set([student_id for event_id in events_in_timeblock for student_id in problem.events[event_id]['S']])
+
     # 1. Place all events in one exact timeslot
     for event_id in events_in_timeblock:
         model.Add(
@@ -292,6 +293,104 @@ def timeslot_block_reassignment(problem:Problem,events_in_timeblock:list,frozen_
                         for room_id in range(problem.R)
                     ])==0
                 )
+
+    # 4. HPE relations
+    if PRF.has_extra_constraints(problem_formulation=problem.formulation):
+        for event_id in events_in_timeblock:
+            for event_id2 in problem.events[event_id]['HPE']:
+                if event_id2 in events_in_timeblock:
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)] * period_id
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])<sum([
+                            xvars[(event_id2,room_id,period_id)]*period_id
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])
+                    )
+                else:
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]*period_id
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])<solution_hint[event_id2][0]
+                    )
+    
+    # 5. For every event in the period three or more consecutive events are forbidden
+    for period_id in range(Problem.P):
+        model.Add(
+            sum([
+                xvars[(event_id,room_id,period_id)]
+                for event_id in events_in_timeblock
+                for room_id in range(problem.R)
+            ])<3
+        )
+
+    single_event_days={(student_id,day):model.NewBoolVar(name=f'SE_{student_id}_{day}') for student_id in partial_students_set for day in range(problem.days)}
+    consecutive_events={(student_id,day,i):model.NewBoolVar(name=f'{student_id}_{day}_{i}') for student_id in partial_students_set for day in range(problem.days) for i in range(3,10)}
+
+
+
+    for student_id in partial_students_set:
+        for day in range(problem.days):
+            model.Add(
+                sum([
+                    xvars[(event_id,room_id,period_id)]
+                    for room_id in range(problem.R)
+                    for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)
+                ])==1
+            ).OnlyEnforceIf(single_event_days[(student_id,day)])
+
+            model.Add(
+                sum([
+                    xvars[(event_id,room_id,period_id)]
+                    for room_id in range(problem.R)
+                    for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)
+                ])!=1
+            ).OnlyEnforceIf(single_event_days[(student_id,day)].Not())
+            
+            for i in range(3,10):
+                for day_period in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-i+1):
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in events_in_timeblock
+                            for room_id in range(problem.R)
+                            for period_id in range(day_period,day_period+i)
+                        ])==i
+                    ).OnlyEnforceIf(consecutive_events[(student_id,day,i)])
+
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in events_in_timeblock
+                            for room_id in range(problem.R)
+                            for period_id in range(day_period,day_period+i)
+                        ])!=i
+                    ).OnlyEnforceIf(consecutive_events[(student_id,day,i)].Not())
+
+    objective=[
+        sum([single_event_days[(student_id,day)] for student_id in partial_students_set for day in range(problem.days)]),
+        sum([consecutive_events[(student_id,day,i)] for student_id in partial_students_set for day in range(problem.days) for i in range(3,10)]),
+        sum([xvars[(event_id,room_id,period_id)] for event_id in events_in_timeblock for room_id in range(problem.R) for period_id in problem.last_period_per_day])
+    ]    
+
+    model.Minimize(sum(objective))
+
+    solver=cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds=timesol
+    solver.parameters.num_search_workers=os.cpu_count()
+    solver.parameters.log_search_progress=True
+    status=solver.Solve(model,cp_model.ObjectiveSolutionPrinter())
+    solution_subset={}
+    if status in [cp_model.FEASIBLE,cp_model.OPTIMAL]:
+        for (event_id,room_id,period_id),dvar in xvars.items():
+            if solver.Value(dvar)==1:
+                solution_subset[event_id]=(period_id,room_id)
+    return solution_subset
 
 
 def partial_room_solver(problem:"Problem",moves:dict,solution_hint=None):
