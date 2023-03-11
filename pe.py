@@ -128,11 +128,8 @@ class Problem:
         console.print(f'Average room suitability:{self.average_room_suitability}')
         console.print(f'Average event period unavailability:{self.average_event_period_unavailability}')
 
-
-    def feature_extraction(self):
-        pass
-
-    def visualize(self):
+    def room_availability(self):
+        # Visualize room availability in heatmap
         pass
 
 if __name__=='__main__':
