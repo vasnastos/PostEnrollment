@@ -4,6 +4,18 @@ from enum import Enum
 import networkx as nx
 from itertools import combinations
 from rich.console import Console
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import seaborn as sn
+
+from bokeh.io import show, output_file,output_notebook
+from bokeh.models import Plot, Range1d, MultiLine, Circle, HoverTool
+from bokeh.plotting import from_networkx
+from bokeh.io.export import export_png
+import networkx as nx
+import screeninfo
+
 
 class PRF(Enum):
     TTCOMP2002=1,
@@ -14,11 +26,36 @@ class PRF(Enum):
     @staticmethod
     def has_extra_constraints(problem_formulation):
         return problem_formulation==PRF.ITC2007 or problem_formulation==PRF.HarderLewisPaechter
-
+    
+    @staticmethod
+    def get_formulation(filename):
+        if Problem.formulationDB==None:
+            Problem.formulationDB=pd.read_excel(os.path.join(Problem.path_to_datasets,'descriptive_ds.xlsx'),header=0)
+            print(Problem.formulationDB)
+        
+        check_vals=Problem.formulationDB['instance'].str.contains(filename)
+        true_indeces=check_vals.index[check_vals==True].to_list()
+        if len(true_indeces)==0:
+            raise ValueError(f"Filename {filename} is not a valid filename")
+        elif len(true_indeces)>1:
+            raise ValueError(f'Filename {filename} is a duplicated record in the system')
+        named_category=Problem.formulationDB.iloc[true_indeces[0]]['category']
+        return PRF.TTCOMP2002 if named_category=="TTCOMP-2002" else PRF.ITC2007 if named_category=="ITC-2007" else PRF.HarderLewisPaechter if named_category=="Harder-(Lewis and Paechter)" else PRF.MetaheuristicsNetwork
 
 class Problem:
-    path_to_datasets=os.path.join('','instances')
+    path_to_datasets=os.path.join('.','instances')
+    formulationDB=None
+    
+    @staticmethod
+    def change_path_to_datasets(self,filepath):
+        Problem.path_to_datasets=filepath
+
+    @staticmethod
+    def get_instances():
+        return [x for x in os.listdir(Problem.path_to_datasets) if x.endswith('.tim')]
+
     def __init__(self):
+        self.id=None
         self.events=defaultdict(dict)
         self.rooms=defaultdict(dict)
         self.students=defaultdict(list)
@@ -42,11 +79,14 @@ class Problem:
         self.average_event_period_unavailability=-1
     
     def read(self,file_id):
+        self.id=file_id.removesuffix(".tim")
+        self.formulation=PRF.get_formulation(file_id)
         with open(os.path.join(Problem.path_to_datasets,file_id),'r') as RF:
             self.E,self.R,self.F,self.S=[int(x) for x in RF.readline().strip().split()]
             self.events={eid:{"S":set(),"F":set(),"HPE":list()} for eid in range(self.E)}
             self.rooms={rid:{"C":-1,"F":set()} for rid in range(self.R)}
             self.event_combinations=dict()
+            self.event_available_periods={event_id:[period_id for period_id in range(self.P)] for event_id in range(self.E)}
 
             # Room-capacity relations
             for rid in range(self.R):
@@ -75,8 +115,8 @@ class Problem:
                 # 5. Event-Period availability
                 for eid in range(self.E):
                     for pid in range(self.P):
-                        if int(RF.readline.strip())==1:
-                            self.event_available_periods[eid].append(pid)
+                        if int(RF.readline().strip())==0:
+                            self.event_available_periods[eid].remove(pid)
                 
                 # 6. Event-Event priority relations
                 for eid in range(self.E):
@@ -92,7 +132,7 @@ class Problem:
         # 7. Find available rooms per event and create the problem Graph using networkx
         for eid in range(self.E):
             for rid in range(self.R):
-                if self.events[eid]['F'].is_subset(self.rooms[eid]['R']) and self.rooms[rid]['F']>=len(self.events[eid]['S']):
+                if self.events[eid]['F'].issubset(self.rooms[rid]['F']) and self.rooms[rid]['C']>=len(self.events[eid]['S']):
                     self.event_available_rooms[eid].append(rid)
         
 
@@ -108,8 +148,8 @@ class Problem:
                     self.G.add_edge(eid,eidn,weight=1)
         
         for events in self.students.values():
-            for combination in combinations(events):
-                self.event_combinations[frozenset(combination)]=self.event_combinations[frozenset(combination)]+1
+            for combination in combinations(events,3):
+                self.event_combinations[frozenset(combination)]=self.event_combinations.get(frozenset(combination),0)+1
     
     def statistics(self):
         self.conflict_density=nx.density(self.G)
@@ -119,18 +159,57 @@ class Problem:
 
         console=Console()
         console.rule('[bold red] Statistics')
-        console.print(f'Events:{self.E}')
-        console.print(f'Features:{self.F}')
-        console.print(f'Rooms:{self.R}')
-        console.print(f'Students:{self.S}')
-        console.print(f'Conflict Density:{self.conflict_density}')
-        console.print(f'Average room size:{self.average_room_size}')
-        console.print(f'Average room suitability:{self.average_room_suitability}')
-        console.print(f'Average event period unavailability:{self.average_event_period_unavailability}')
+        console.print(f'[bold green]Events:{self.E}')
+        console.print(f'[bold green]Features:{self.F}')
+        console.print(f'[bold green]Rooms:{self.R}')
+        console.print(f'[bold green]Students:{self.S}')
+        console.print(f'[bold green]Conflict Density:{self.conflict_density}')
+        console.print(f'[bold green]Average room size:{self.average_room_size}')
+        console.print(f'[bold green]Average room suitability:{self.average_room_suitability}')
+        console.print(f'[bold green]Average event period unavailability:{self.average_event_period_unavailability}')
 
-    def room_availability(self):
-        # Visualize room availability in heatmap
-        pass
+    def student_enrollment(self):
+        """
+             A bar chart or pie chart can be created to show the number of students enrolled 
+             in each course. This can help identify courses that are over- or under-subscribed, 
+             and inform decisions about course scheduling and resource allocation.
+        """
+        
+        enrollments=[len(self.events[eid]['S']) for eid in range(self.E)]
+        mean_enrollments=sum(enrollments)/self.S
+
+        sm = plt.cm.ScalarMappable(cmap='viridis')
+        sm.set_array([])  # set empty array to initialize
+        plt.figure(figsize=(15,12))
+        plt.xticks(np.arange(0,self.E,25))
+        plt.bar(np.arange(self.E),enrollments,color=sm.to_rgba(enrollments),width=5)
+        plt.axhline(y=mean_enrollments,color='red',linewidth=3)
+        ax=plt.gca()
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.show()
+    
+    def plot_graph(self):
+        screen = screeninfo.get_monitors()[1]
+        output_notebook()
+        plot = Plot(title="Large Graph Visualization with Bokeh", x_range=Range1d(-1.1, 1.1), y_range=Range1d(-1.1, 1.1),width=screen.width, height=screen.height)
+
+        graph_renderer = from_networkx(self.G, nx.spring_layout, scale=1, center=(0, 0))
+
+        graph_renderer.node_renderer.glyph = Circle(size=10, fill_color='red')
+        graph_renderer.edge_renderer.glyph = MultiLine(line_color='gray', line_alpha=0.4, line_width=0.5)
+        plot.renderers.append(graph_renderer)
+
+        hover = HoverTool(tooltips=[('index', f'Event_@index')])
+        plot.add_tools(hover)
+
+        output_file(f"{self.id}.html")
+        show(plot)
+        export_png(plot,filename=os.path.join('','figures',f'{self.id}.png'))
+
 
 if __name__=='__main__':
-    pass
+    problem=Problem()
+    problem.read('i20.tim')
+    problem.statistics()
+    problem.plot_graph()
