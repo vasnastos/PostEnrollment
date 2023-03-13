@@ -14,6 +14,7 @@ class Solution:
         random.seed(time.time())
         self.problem=pe.Problem()
         self.problem.read(ds_name)
+        self.memory=dict()
     
     def compute_cost(self):
         ecost=0
@@ -288,7 +289,17 @@ class Solution:
             raise ValueError(f"Operator {operator_choice} does not implement yet")
 
     def reposition(self,moves):
+        self.memory.clear()
+        move_cost=0
         for event_id,(period_id,room_id) in moves.items():
+            self.memory[event_id]=(period_id,room_id)
+            move_cost+=self.unschedule(event_id)
+            move_cost+=self.schedule(event_id,room_id,period_id)
+        
+        return move_cost
+
+    def rollback(self):
+        for event_id,(period_id,room_id) in self.memory.items():
             self.unschedule(event_id)
             self.schedule(event_id,room_id,period_id)
 
