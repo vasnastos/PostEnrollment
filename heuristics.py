@@ -47,7 +47,13 @@ class Hill_ClimbingLA:
                 break
 
         return best_solution
-            
-        
+
+
+class SimulatedAnnealing:
+    def __init__(self) -> None:
+        pass
+    
+    def solve(self,temperature=1000,alpha=0.9999,timesol=1000):
+        pass
 
 
