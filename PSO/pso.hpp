@@ -1,4 +1,7 @@
-#include "pso.hpp"
+#include "problem.hpp"
+#include "collection.hpp"
+
+using namespace std;
 
 class PSO
 {
@@ -9,6 +12,12 @@ class PSO
     double inertia;
     double besty;
     Data bestx;
+
+    Collection particle;
+    Collection  bestParticle;
+    Collection velocity;
+
+
     public:
         PSO(Problem *p);
         ~PSO();

@@ -32,4 +32,5 @@ class Problem
 
         int get_function_calls()const;
         bool is_point_in(Data &x);
+        bool isPointIn(Data &x);
 };

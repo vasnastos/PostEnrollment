@@ -50,10 +50,13 @@ class Hill_ClimbingLA:
 
 
 class SimulatedAnnealing:
-    def __init__(self) -> None:
-        pass
+    def __init__(self,ds_name) -> None:
+        self.solution=Solution(ds_name)
     
     def solve(self,temperature=1000,alpha=0.9999,timesol=1000):
-        pass
+        start_temperature=temperature
+        ited_id=0
+        start_timer=time.time()
+
 
 

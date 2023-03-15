@@ -56,3 +56,12 @@ bool Problem::is_point_in(Data &x)
     }
     return true;
 }
+
+bool Problem::isPointIn(Data &x)
+{
+    for(int i=0,t=x.size();i<t;i++)
+    {
+        if(x[i]<this->left[i] || x[i]>this->right[i]) return false;
+    }
+    return true;
+}
