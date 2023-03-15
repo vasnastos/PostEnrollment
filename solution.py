@@ -245,7 +245,6 @@ class Solution:
         while len(eneighbors)==0:
             event_id1=random.randint(0,self.problem.E-1)
             eneighbors=self.problem.G.neighbors(event_id1)
-
         event_id2=eneighbors[random.randint(0,len(eneighbors)-1)]
         
         versus_periods={
@@ -276,9 +275,9 @@ class Solution:
                 return dict()
         return potential_solution
 
+
     def select_operator(self):
         operator_choice=random.randint(1,3)
-
         if operator_choice==1:
             return self.transfer_event()
         elif operator_choice==2:

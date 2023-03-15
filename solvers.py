@@ -2,6 +2,101 @@ from ortools.sat.python import cp_model
 from pe import Problem,PRF
 import os
 
+def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
+    """
+        Initial solution creator. It constructs 3 different solutions using 3 different models(cp-sat,cplex-Cp and gurobi-mip)
+        Parameters:
+            - problem: A problem instance load by class Problem
+            - csolver: The type of the solver is used for consructing initial solutions("cp-sat","cp-cplex","gurobi")
+            - save: Format that the solution could be potential saved("txt","pickle","None")
+            - timesol: time in seconds the the solver would run for
+    """
+    if csolver=='cp-sat':
+        model=cp_model.CpModel()
+        xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in range(problem.E) for room_id in range(problem.R) for period_id in range(problem.P)}
+
+        # 1. One event should be placed in only one room in only one period
+        for event_id in range(problem.E):
+            model.Add(
+                sum([
+                    xvars[(event_id,room_id,period_id)]
+                    for room_id in range(problem.R)
+                    for period_id in range(problem.P)
+                ])==1
+            )
+        
+        # 2. Events should not be placed in non valid rooms or periods
+        for event_id in range(problem.E):
+            for room_id in range(problem.R):
+                if room_id not in problem.event_available_rooms[event_id]:
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])==0
+                    )
+            
+            for period_id in range(problem.P):
+                if period_id not in problem.event_available_periods[event_id]:
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for room_id in range(problem.R)
+                        ])==0
+                    )
+
+        # 3. Add neighborhood constraints
+        for event_id in range(problem.E):
+            for neighbor_id in range(problem.G.neighbors(event_id)):
+                for period_id in range(problem.P):
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for room_id in range(problem.R)
+                        ])+sum([
+                            xvars[(neighbor_id,room_id,period_id)]
+                            for room_id in range(problem.R)
+                        ])<=1
+                    )
+        
+        # 4. Add precedence relations
+        if PRF.has_extra_constraints(problem.formulation):
+            for event_id in range(problem.E):
+                for event_id2 in problem.events[event_id]['HPE']:
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)] * period_id
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])<sum([
+                            xvars[(event_id2,room_id,period_id)] * period_id
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])
+                    )
+        
+        solver=cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds=timesol
+        solver.parameters.num_search_workers=os.cpu_count()
+        solver.parameters.log_search_progress=True
+        status=solver.Solve(model)
+        generated_solution={}
+        if status in [cp_model.FEASIBLE,cp_model.OPTIMAL]:
+            for (event_id,room_id,period_id),dvar in xvars.items():
+                if solver.Value(dvar)==1:
+                    generated_solution[event_id]=(period_id,room_id)
+
+        return generated_solution
+    
+    elif  csolver=="cp-cplex":
+        # cplex solver
+        pass
+    
+    elif csolver=='gurobi':
+        # Gurobi solver
+        pass
+
 def full_solver(problem:"Problem",solution_hint=None,timesol=600):
     model=cp_model.CpModel()
     xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in range(problem.E) for room_id in range(problem.R) for period_id in range(problem.P)}
