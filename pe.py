@@ -25,11 +25,11 @@ class PRF(Enum):
 
     @staticmethod
     def has_extra_constraints(problem_formulation):
-        return problem_formulation==PRF.ITC2007 or problem_formulation==PRF.HarderLewisPaechter
+        return problem_formulation==PRF.ITC2007
     
     @staticmethod
     def get_formulation(filename):
-        if Problem.formulationDB==None:
+        if type(Problem.formulationDB)!=pd.DataFrame:
             Problem.formulationDB=pd.read_excel(os.path.join(Problem.path_to_datasets,'descriptive_ds.xlsx'),header=0)
             print(Problem.formulationDB)
         
@@ -41,6 +41,10 @@ class PRF(Enum):
             raise ValueError(f'Filename {filename} is a duplicated record in the system')
         named_category=Problem.formulationDB.iloc[true_indeces[0]]['category']
         return PRF.TTCOMP2002 if named_category=="TTCOMP-2002" else PRF.ITC2007 if named_category=="ITC-2007" else PRF.HarderLewisPaechter if named_category=="Harder-(Lewis and Paechter)" else PRF.MetaheuristicsNetwork
+
+    @staticmethod
+    def named_formulation(formulation):
+        return "original" if formulation==PRF.HarderLewisPaechter or formulation==PRF.MetaheuristicsNetwork else "full"
 
 class Problem:
     path_to_datasets=os.path.join('.','instances')
@@ -121,7 +125,7 @@ class Problem:
                 # 6. Event-Event priority relations
                 for eid in range(self.E):
                     for eid2 in range(self.E):
-                        line=RF.readline()
+                        line=RF.readline().strip()
                         if line=="":
                             break
                         elif int(line)==1:
@@ -158,15 +162,18 @@ class Problem:
         self.average_room_suitability=sum([len(self.event_available_rooms[eid]) for eid in range(self.E)])/(self.R*self.E)
 
         console=Console()
-        console.rule('[bold red] Statistics')
+        console.rule('[bold red] Insights')
+        console.print(f'[bold blue]Dataset:{self.id}')
         console.print(f'[bold green]Events:{self.E}')
         console.print(f'[bold green]Features:{self.F}')
         console.print(f'[bold green]Rooms:{self.R}')
         console.print(f'[bold green]Students:{self.S}')
+        console.print(f'[bold green]Periods:{self.P}')
+        console.print(f'[bold green]Formulation:{PRF.named_formulation(self.formulation)}')
         console.print(f'[bold green]Conflict Density:{self.conflict_density}')
         console.print(f'[bold green]Average room size:{self.average_room_size}')
         console.print(f'[bold green]Average room suitability:{self.average_room_suitability}')
-        console.print(f'[bold green]Average event period unavailability:{self.average_event_period_unavailability}')
+        console.print(f'[bold green]Average event period unavailability:{self.average_event_period_unavailability}',end='\n\n')
 
     def student_enrollment(self):
         """

@@ -46,10 +46,30 @@ class Solution:
 
         return ecost
 
+    def compute_partial_cost(self,current_solution):
+        ecost=0
+
+        for student_id in range(self.problem.S):
+            student_periods=[current_solution[event_id] for event_id in self.problem.students[student_id] if event_id in current_solution]
+            for day in range(self.problem.days):
+                consecutive=0
+                for period_id in range(day*self.problem.periods_per_day,day*self.problem.periods_per_day+self.problem.periods_per_day):
+                    if period_id in student_periods:
+                        consecutive+=1
+                    else:
+                        if consecutive>2:
+                            ecost+=(consecutive-2)
+                        consecutive=0
+        return ecost        
+
     def can_be_moved(self,event_id,period_id,excluded=[]):
         for neighbor_id in self.problem.G.neighbors(event_id):
             if neighbor_id in excluded: continue
             if period_id==self.solution_set[neighbor_id]['P']:
+                return False
+        
+        for event_id2 in self.problem.events[event_id]['HPE']:
+            if period_id>self.solution_set[event_id2][0]:
                 return False
         return True
 
@@ -294,15 +314,11 @@ class Solution:
             self.memory[event_id]=(period_id,room_id)
             move_cost+=self.unschedule(event_id)
             move_cost+=self.schedule(event_id,room_id,period_id)
-        
         return move_cost
 
     def rollback(self):
         for event_id,(period_id,room_id) in self.memory.items():
             self.unschedule(event_id)
             self.schedule(event_id,room_id,period_id)
-
-if __name__=='__main__':
-    pass
 
 
