@@ -55,8 +55,18 @@ class Problem:
         Problem.path_to_datasets=filepath
 
     @staticmethod
-    def get_instances():
-        return [x for x in os.listdir(Problem.path_to_datasets) if x.endswith('.tim')]
+    def get_instances(formulations='all'):
+        if isinstance(formulations,str):
+            if formulations=='all':
+                return [x for x in os.listdir(Problem.path_to_datasets) if x.endswith('.tim')]
+            else:
+                raise ValueError("No such dataset type")
+        else:
+            for formulation in formulations:
+                if type(formulation)!=PRF:
+                    raise ValueError("Unknown type of formulations")
+            return [x for x in [x for x in os.listdir(Problem.path_to_datasets) if x.endswith('.tim') and x!='toy.tim'] if PRF.get_formulation(x) in formulations]
+
 
     def __init__(self):
         self.id=None

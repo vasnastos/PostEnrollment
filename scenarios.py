@@ -1,7 +1,8 @@
 from solvers import create_timetable,solve
-from pe import Problem
+from pe import Problem,PRF
 from time import time
 import pickle
+from heuristics import TabuSearch
 
 
 def scenario1():
@@ -21,5 +22,16 @@ def scenario1():
         pickle.dump(counters,binary_writer)
 
 
+def scenario2():
+    """
+    Try the tabu search formulation scenario
+    """
+    instances=Problem.get_instances(formulations=[PRF.MetaheuristicsNetwork,PRF.HarderLewisPaechter])
+    for instance in instances:
+        ts=TabuSearch(instance)
+        _=ts.TS()
+
+
 if __name__=='__main__':
-    scenario1()
+    # scenario1()
+    scenario2()

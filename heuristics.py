@@ -96,52 +96,65 @@ class TabuSearch:
         self.solution=Solution(filename)
     
     def TS(self,tabu_size=500):
-        unplacedE=list(self.solution.problem.E)
+        unplacedE=list(range(self.solution.problem.E))
         current_solution={event_id:-1 for event_id in range(self.solution.problem.E)}
+        current_best_solution=current_solution
+        current_best_objective=sys.maxsize
         console=Console(record=True)
         tabu_list=list()
         memory=dict()
         start_timer=time.time()
+        console.rule('[bold red] Tabu Search Initial Solution')
+
+
         while len(unplacedE)!=0:
             minimum_cost=sys.maxsize
-            unplacedE_copy=copy.copy(unplacedE)
             best_event=None
             best_slot=None
             unplacedE_copy=copy.copy(unplacedE)
             for event_id in unplacedE:
-                for timeslot in self.solution.problem.event_available_periods:
-                    memory.clear()
-                    for neighbor_id in self.solution.problem.G.neighbors(event_id):
-                        memory[neighbor_id]=(current_solution[neighbor_id],neighbor_id not in unplacedE)
-                        current_solution.pop(neighbor_id)
-                        if neighbor_id not in unplacedE:
-                            unplacedE_copy.append(neighbor_id)
-                    
-                    if len(unplacedE)<minimum_cost and current_solution not in tabu_list:
-                        best_event=event_id
-                        best_slot=timeslot
-                        minimum_cost=len(unplacedE)
-                    
-                    for neighbor_id in self.solution.problem.G.neighbors(event_id):
-                        current_solution[neighbor_id]=memory[neighbor_id][0]
-                        if not memory[neighbor_id][1]:
-                            unplacedE_copy.remove(neighbor_id)
+                unplacedE_copy.remove(event_id)
+                for timeslot in self.solution.problem.event_available_periods[event_id]:
+                    if self.solution.can_be_moved(event_id,timeslot,excluded=self.solution.problem.G.neighbors(event_id)):
+                        memory.clear()
+                        for neighbor_id in self.solution.problem.G.neighbors(event_id):
+                            memory[neighbor_id]=(current_solution[neighbor_id],neighbor_id not in unplacedE)
+                            current_solution.pop(neighbor_id)
+                            if neighbor_id not in unplacedE_copy:
+                                unplacedE_copy.append(neighbor_id)
+                        
+                        if len(unplacedE)<minimum_cost and current_solution not in tabu_list:
+                            best_event=event_id
+                            best_slot=timeslot
+                            minimum_cost=len(unplacedE_copy)
+                        
+                        for neighbor_id in self.solution.problem.G.neighbors(event_id):
+                            current_solution[neighbor_id]=memory[neighbor_id][0]
+                            if not memory[neighbor_id][1]:
+                                unplacedE_copy.remove(neighbor_id)
                 
                 unplacedE_copy.append(event_id)
             
             if best_event:
-                console.log(f'[bold green] New event placed in a timesolot\tE{best_event}->P{best_slot} Objective:{minimum_cost}')
+                console.log(f'[bold green] New candicate Solution\tE{best_event}->P{best_slot} Objective:{minimum_cost}')
             
                 for neighbor_id in self.solution.problem.neighbors(best_event):
                     if neighbor_id in current_solution:
                         current_solution.pop(neighbor_id)
                         unplacedE_copy.append(neighbor_id)
                 
-                current_solution[best_event]=best_slot
+                if len(unplacedE_copy)<current_best_objective:
+                    current_best_objective=len(unplacedE_copy)
+                    current_solution[best_event]=best_slot
+                    for neighbor_id in self.solution.problem.neighbors(best_event):
+                        if neighbor_id in current_solution:
+                            current_solution.pop(neighbor_id)
+                    current_best_solution=current_solution
+
                 if len(tabu_list)==tabu_size:
                     tabu_list.pop(0)
                 tabu_list.append(current_solution)
-
+                
             if time.time()-start_timer:
                 break
         return current_solution

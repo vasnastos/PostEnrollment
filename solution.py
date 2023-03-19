@@ -6,14 +6,14 @@ from queue import LifoQueue
 
 class Solution:
     def __init__(self,ds_name):
+        self.problem=pe.Problem()
+        self.problem.read(ds_name)
         self.solution_set={event_id:{"P":-1,"R":-1} for event_id in range(self.problem.E)}
         self.roomwise_solutions=defaultdict(list)
         self.periodwise_solutions=defaultdict(list)
         self.room_period_availability=defaultdict(dict)
         self.cost=0
         random.seed(time.time())
-        self.problem=pe.Problem()
-        self.problem.read(ds_name)
         self.memory=dict()
     
     def compute_cost(self):
