@@ -91,7 +91,14 @@ class Problem:
         self.average_room_suitability=-1
         self.average_room_size=-1
         self.average_event_period_unavailability=-1
+        self.total_clash=0
     
+    def clashe(self,event_id):
+        if event_id not in self.events.keys():
+            raise ValueError("No such event appears in the Graph")
+
+        return len(self.G.neighbors(event_id))
+
     def read(self,file_id):
         self.id=file_id.removesuffix(".tim")
         self.formulation=PRF.get_formulation(file_id)
@@ -164,7 +171,9 @@ class Problem:
         for events in self.students.values():
             for combination in combinations(events,3):
                 self.event_combinations[frozenset(combination)]=self.event_combinations.get(frozenset(combination),0)+1
-    
+
+        self.total_clash=self.G.number_of_edges()
+
     def statistics(self):
         self.conflict_density=nx.density(self.G)
         self.average_room_size=sum([self.rooms[rid]['C'] for rid in range(self.R)])/self.R

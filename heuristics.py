@@ -1,6 +1,8 @@
 from solution import Solution
 from rich.console import Console
-import random,time,math,sys,copy
+import random,time,math,sys,copy,math
+from queue import LifoQueue
+from pe import Problem
 
 class Hill_ClimbingLA:
     def __init__(self,dataset_name:str,initial_threshold:int) -> None:
@@ -93,8 +95,129 @@ class SimulatedAnnealing:
 
 class TabuSearch:
     def __init__(self,filename):
-        self.solution=Solution(filename)
+        self.problem=Problem()
+        self.problem.read(filename)
+        self.solution_set={event_id:(-1,-1) for event_id in range(self.problem.E)}
+        self.periodwise_solutions={period_id:list() for period_id in range(self.problem.P)}
     
+    def modify(self,event_id,value,wise='period'):
+        if wise=='period':
+            self.solution_set[event_id]['P']=value
+        elif wise=='room':
+            self.solution_set[event_id]['R']=value
+
+    def can_be_moved(self,wise='room',excluded=[],**kwargs):
+        if wise=='room':
+            if 'room' not in kwargs:
+                raise ValueError("Room does not appear in kwargs")
+            if 'period' not in kwargs:
+                raise ValueError("Period does not appear in kwargs")
+            
+            room_id=int(kwargs['room'])
+            period_id=int(kwargs['period'])
+
+            for event_id in self.periodwise_solution[period_id]:
+                if event_id in excluded: continue
+                if self.solution_set[event_id]['R']==room_id:
+                    return False
+            return True
+        
+        elif wise=='period':
+            if 'event' not in kwargs:
+                raise ValueError("Room does not appear in kwargs")
+            if 'period' not in kwargs:
+                raise ValueError("Period does not appear in kwargs")
+
+            event_id=int(kwargs['event'])
+            period_id=int(kwargs['period'])
+
+            for neighbor_id in list(self.problem.G.neighbors(event_id)):
+                if period_id==self.solution_set[neighbor_id]['P']:
+                    return False
+            return True
+
+        raise ValueError("You did not provide right argument type")
+
+    def transfer(self,event_id):
+        random.seed=int(time.time())
+        shuffled_rooms=list(range(self.problem.R))
+        random.shuffle(shuffled_rooms)
+
+        event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))-1]
+
+        for room_id in shuffled_rooms:
+            if room_id in self.problem.event_available_rooms[event_id]:
+                if self.can_be_moved(wise='room',room=room_id,period=self.solution_set[event_id]['P']):
+                    return {
+                        event_id:(self.solution_set[event_id]['P'],room_id)
+                    }
+                
+    def swap(self,event_id):
+        # event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        event_id2=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        while event_id2==event_id:
+            event_id2=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        if self.can_be_moved(wise='room',excluded=[event_id2],room=self.solution_set[event_id2]['R'],period=self.solution_set[event_id]['P']) and self.can_be_moved(wise='room',excluded=[event_id],room=self.solution_set[event_id]['R'],period=self.solution_set[event_id2]['P']):
+            return {
+                event_id:(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R']),
+                event_id2:(self.solution_set[event_id2]['P'],self.solution_set[event_id]['R'])
+            }
+        return dict()
+    
+    def kempe_chain(self,event_id):
+        # event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        event_id2=random.choice(self.problem.G.neighbors(event_id))
+
+        versus_period={
+            self.solution_set[event_id]['R']:self.solution_set[event_id2]['R'],
+            self.solution_set[event_id2]['R']:self.solution_set[event_id]['R']
+        }
+
+        kc=LifoQueue()
+        kc.put(event_id)
+        moves={}
+        while not kc.empty():
+            current_event=kc.get()
+            current_room=self.solution_set[current_event]['R']
+            new_room=versus_period[current_room]
+            moves[current_event]=new_room
+            for neighbor_id in list(self.problem.G.neighbors(current_event)):
+                if neighbor_id in moves: continue
+                if self.solution_set[neighbor_id]['R']==new_room:
+                    kc.put(neighbor_id)
+        
+        return moves
+
+    def kick(self,event_id):
+        # event_id=random.choice(list(self.solution_set.keys()))
+        event_id2=random.choice(list(self.solution_set.keys()))
+        random.seed=int(time.time())
+        shuffle_slots=self.problem.event_available_rooms[event_id2]
+        random.shuffle(shuffle_slots)
+        
+        while event_id==event_id2:
+            event_id2=random.choice(list(self.solution_set.keys()))
+        
+        if self.solution_set[event_id2]['R'] not in self.problem.event_available_rooms[event_id]:
+            return dict()
+
+        candicate_move=dict()
+        if self.can_be_moved(wise='room',excluded=[event_id2],room=self.solution_set[event_id2]['R'],period=self.solution_set[event_id]['P']):
+            candicate_move[event_id]=(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R'])
+        
+        complete_kick_move=False
+        for room_id in shuffle_slots:
+            if room_id==self.solution_set[event_id2]['R']: continue
+            if self.can_be_moved(wise='room',room=room_id,period=self.solution_set[event_id]['P']):
+                candicate_move[event_id2]=(self.solution_set[event_id2]['P'],room_id)
+                complete_kick_move=True
+                break
+        
+        if complete_kick_move:
+            return candicate_move
+        return dict()
+
+
     def TS(self,tabu_size=500):
         unplacedE=list(range(self.solution.problem.E))
         current_solution={event_id:-1 for event_id in range(self.solution.problem.E)}
@@ -154,7 +277,87 @@ class TabuSearch:
                 if len(tabu_list)==tabu_size:
                     tabu_list.pop(0)
                 tabu_list.append(current_solution)
-                
+
             if time.time()-start_timer:
                 break
         return current_solution
+
+    def TSSP(self,best,unassignedE,timesol):
+        console=Console(record=True)
+        unplacedE=copy.copy(unassignedE)
+        current_solution=copy.copy(best)
+        obj=lambda unplacedE_val:sum([1+self.solution.problem.clashe(event_id)/self.solution.problem.total_clash for event_id in unplacedE_val])
+        ITER=math.pow(self.solution.problem.R,3)
+        memory=dict()
+        tabu_list=list()
+        i=0
+        start_time=time.time()
+        console.rule('[bold red]TSSP Procedure')
+        while len(unplacedE)==0:
+            sampleE=[unplacedE[random.randint(0,len(unplacedE)-1)] for _ in range(10)]
+            min_unplaced_cost=sys.maxsize
+            best_event=None
+            best_timeslot=None
+            
+            for event_id in sampleE:
+                for timeslot in self.solution.problem.event_available_periods[event_id]:
+                    memory.clear()
+                    for neighbor_id in list(self.solution.problem.G.neighbors(event_id)):
+                        if neighbor_id in self.solution_set:
+                            memory[neighbor_id]=current_solution[neighbor_id]
+                            if neighbor_id in current_solution:
+                                current_solution.pop(neighbor_id)
+                            if neighbor_id not in unplacedE:
+                                unplacedE.append(neighbor_id)
+                    
+                    if obj(current_solution.keys())<min_unplaced_cost:
+                        best_event=event_id
+                        best_timeslot=timeslot
+
+                    for neighbor_id in list(self.solution.problem.G.neighbors(event_id)):
+                        current_solution[neighbor_id]=memory[neighbor_id]
+                        unplacedE.remove(neighbor_id)
+
+                tabu_list.append(current_solution)
+                unplacedE.append(event_id)
+            
+            if best_event:
+                for event_id in self.solution.problem.G.neighbors(best_event):
+                    if event_id in current_solution:
+                        current_solution.pop(event_id)
+                current_solution[best_event]=best_timeslot
+                min_unplaced_cost=obj(current_solution.keys())
+
+            if obj(current_solution.keys())<obj(best.keys()):
+                best=current_solution
+                unassignedE=unplacedE
+            
+            
+            unplacedE.remove(best_event)
+            for neighbor_id in self.solution.problem.G.neighbors(best_event):
+                if neighbor_id not in unplacedE:
+                    unplacedE.append(neighbor_id)
+            
+            if i==ITER:
+                for event_id,period_id in current_solution.items():
+                    self.modify(event_id,period_id,wise='period')
+                
+                self.Perturb()
+                i=0
+                tabu_list.clear() 
+            i+=1
+            if time.time()-start_time>timesol:
+                break
+    
+    def Perturb(self):
+        for event_id in list(self.solution_set.keys()):
+            for _ in range(len(self.problem.event_available_rooms[event_id])):
+                roperator=random.randint(1,4)
+                if roperator==1:
+                    self.transfer(event_id)
+                elif roperator==2:
+                    self.swap(event_id)
+                elif roperator==3:
+                    self.kempe_chain(event_id)
+                elif roperator==4:
+                    self.kick(event_id)

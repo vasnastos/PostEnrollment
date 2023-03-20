@@ -195,7 +195,7 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
     elif csolver=='gurobi':
         # Gurobi solver
         model=gp.Model(name="Gurobi_post_enrollment")
-        xvars=model.addVars(list(product(eset)))
+        # xvars=model.addVars(list(product(eset)))
     
     # save options
     if save=='txt':
@@ -208,9 +208,9 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
 
     return generated_solution
     
-def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,full=False,timesol=600,**kwargs):
+def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,days_combined=False,full=False,timesol=600,**kwargs):
 
-    if sum([day_by_day,full])==0:
+    if sum([day_by_day,full,days_combined])==0:
         raise ValueError("Both day_by_day and full params setted to False.\n You should set one of the parameters in True")
     elif sum([day_by_day,full])>1:
         raise ValueError("You set day_by_day and full solver to True. You must select one of the solvers to use")
@@ -332,7 +332,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
     
     elif day_by_day:
         if 'day' not in kwargs:
-                raise ValueError("Day-by-Day solver called and no day provided")
+            raise ValueError("Day-by-Day solver called and no day provided")
         if 'solution_hint' not in kwargs:
             raise ValueError("No initial solution provided")
         
@@ -636,6 +636,145 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
             for (event_id,room_id,period_id),dvar in xvars.items():
                 if dvar.X==1:
                     generated_solution[event_id]=(period_id,room_id)
+    
+    elif days_combined:
+        if 'days' not in kwargs:
+            raise ValueError("You did not provide the right amount of arguments in the solver")
+        days=kwargs['days']
+        if 'solution_hint' not in kwargs:
+            solution_hint=None
+        else:
+            solution_hint=kwargs['solution_hint']
+
+        if tsolver=='cp-sat':
+            model=cp_model.CpModel()
+            eset=[event_id for event_id,(period_id,_) in solution_hint.items() if period_id//problem.periods_per_day in days]
+            periods=[period_id for day in days for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)]
+            xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'dv_{event_id}_{room_id}_{period_id}') for event_id in eset for room_id in range(problem.R) for period_id in periods}
+            partial_student_set=set([student_id for event_id in eset for student_id in problem.events[event_id]['S']])
+            eset_combinations=[for ecombination in ]
+
+            for event_id,(period_id,room_id) in solution_hint.items():
+                model.AddHint(xvars[(event_id,room_id,period_id)],1)
+
+            for event_id in eset:
+                model.Add(
+                    sum([
+                        xvars[(event_id,room_id,period_id)]
+                        for room_id in range(problem.R)
+                        for period_id in periods
+                    ])==1
+                )
+            
+            for event_id in eset:
+                for room_id in range(problem.R):
+                    if room_id not in problem.event_available_rooms[event_id]:
+                        model.Add(
+                            sum([
+                                xvars[(event_id,room_id,period_id)]
+                                for period_id in periods
+                            ])==0
+                        )
+                for period_id in periods:
+                    if period_id not in problem.event_available_periods[event_id]:
+                        model.Add(
+                            sum([
+                                xvars[(event_id,room_id,period_id)]
+                                for room_id in range(problem.R)
+                            ])==0
+                        )
+            
+            for room_id in range(problem.R):
+                for period_id in periods:
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in eset
+                        ])<=1
+                    )
+
+            for event_id in eset:
+                for neighbor_id in list(problem.G.neighbors(event_id)):
+                    if neighbor_id in eset:
+                        for period_id in periods:
+                            model.Add(
+                                sum([
+                                    xvars[(event_id,room_id,period_id)]
+                                    for room_id in range(problem.R)
+                                ])+sum([
+                                    xvars[(neighbor_id,room_id,period_id)]
+                                    for room_id in range(problem.R)
+                                ])<=1
+                            )
+                    else:
+                        model.Add(
+                            sum([
+                                xvars[(event_id,room_id,solution_hint[event_id]['P'])]
+                                for room_id in range(problem.R)
+                            ])==0
+                        )
+            
+            if PRF.has_extra_constraints(problem.formulation):
+                for event_id in eset:
+                    for event_id2 in problem.events[event_id]['HPE']:
+                        if event_id2 in eset:
+                            model.Add(
+                                sum([
+                                    xvars[(event_id,room_id,period_id)]*period_id
+                                    for room_id in range(problem.R)
+                                    for period_id in periods
+                                ])<sum([
+                                    xvars[(event_id,room_id,period_id)]*period_id
+                                    for room_id in range(problem.R)
+                                    for period_id in periods
+                                ])
+                            )
+                        else:
+                            model.Add(
+                                sum([
+                                    xvars[(event_id,room_id,period_id)]*period_id
+                                    for room_id in range(problem.R)
+                                    for period_id in periods
+                                ])<solution_hint[event_id2]['P']
+                            )
+            
+            single_event_days={(student_id,day):model.NewBoolVar(name=f'se_{student_id}_{day}') for student_id in partial_student_set for day in days}
+            consecutive_events={(student_id,day,i):model.NewBoolVar(name=f'se_{student_id}_{day}_{i}') for student_id in partial_student_set for day in days for i in range(3,10)}
+
+            for student_id in partial_student_set:
+                student_events_set=[event_id for event_id in problem.students[student_id] if event_id in eset]
+                for day in days:
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in student_events_set
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])==1
+                    ).OnlyEnforceIf(single_event_days[(student_id,day)])
+
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in student_events_set
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])!=1
+                    ).OnlyEnforceIf(single_event_days[(student_id,day)].Not())
+                    
+                    for i in range(3,10):
+                        for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-i+1):
+                            if period_id>day*problem.periods_per_day:
+                                previous_period_cost=sum([for event_id])
+                            
+                            model.Add(
+                                sum([
+                                    xvars[(event_id,room_id,period_id-1)]
+                                    for event_id in student_events_set
+                                    for room_id in range(problem.R)
+                                ])
+                            )
+
 
     return generated_solution
 

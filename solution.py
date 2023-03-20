@@ -321,4 +321,138 @@ class Solution:
             self.unschedule(event_id)
             self.schedule(event_id,room_id,period_id)
 
+class SolutionV2:
+    def __init__(self,filename):
+        self.problem=pe.Problem()
+        self.problem.read(filename)
+        self.solution_set={event_id:{'R':-1,'P':-1} for event_id in range(self.problem.E)}
+        self.periodwise_solution={period_id:list() for period_id in range(self.problem.P)}
+
+    def modify(self,event_id,value,wise='period'):
+        if wise=='period':
+            self.solution_set[event_id]['P']=value
+        elif wise=='room':
+            self.solution_set[event_id]['R']=value
+
+    def can_be_moved(self,wise='room',excluded=[],**kwargs):
+        if wise=='room':
+            if 'room' not in kwargs:
+                raise ValueError("Room does not appear in kwargs")
+            if 'period' not in kwargs:
+                raise ValueError("Period does not appear in kwargs")
+            
+            room_id=int(kwargs['room'])
+            period_id=int(kwargs['period'])
+
+            for event_id in self.periodwise_solution[period_id]:
+                if event_id in excluded: continue
+                if self.solution_set[event_id]['R']==room_id:
+                    return False
+            return True
+        
+        elif wise=='period':
+            if 'event' not in kwargs:
+                raise ValueError("Room does not appear in kwargs")
+            if 'period' not in kwargs:
+                raise ValueError("Period does not appear in kwargs")
+
+            event_id=int(kwargs['event'])
+            period_id=int(kwargs['period'])
+
+            for neighbor_id in list(self.problem.G.neighbors(event_id)):
+                if period_id==self.solution_set[neighbor_id]['P']:
+                    return False
+            return True
+
+        raise ValueError("You did not provide right argument type")
+
+    def transfer(self):
+        random.seed=int(time.time())
+        shuffled_rooms=list(range(self.problem.R))
+        random.shuffle(shuffled_rooms)
+
+        event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))-1]
+
+        for room_id in shuffled_rooms:
+            if room_id in self.problem.event_available_rooms[event_id]:
+                if self.can_be_moved(wise='room',room=room_id,period=self.solution_set[event_id]['P']):
+                    return {
+                        event_id:(self.solution_set[event_id]['P'],room_id)
+                    }
+                
+    def swap(self):
+        event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        event_id2=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        while event_id2==event_id:
+            event_id2=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        if self.can_be_moved(wise='room',excluded=[event_id2],room=self.solution_set[event_id2]['R'],period=self.solution_set[event_id]['P']) and self.can_be_moved(wise='room',excluded=[event_id],room=self.solution_set[event_id]['R'],period=self.solution_set[event_id2]['P']):
+            return {
+                event_id:(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R']),
+                event_id2:(self.solution_set[event_id2]['P'],self.solution_set[event_id]['R'])
+            }
+        return dict()
+    
+    def kempe_chain(self):
+        event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        event_id2=random.choice(self.problem.G.neighbors(event_id))
+
+        versus_period={
+            self.solution_set[event_id]['R']:self.solution_set[event_id2]['R'],
+            self.solution_set[event_id2]['R']:self.solution_set[event_id]['R']
+        }
+
+        kc=LifoQueue()
+        kc.put(event_id)
+        moves={}
+        while not kc.empty():
+            current_event=kc.get()
+            current_room=self.solution_set[current_event]['R']
+            new_room=versus_period[current_room]
+            moves[current_event]=new_room
+            for neighbor_id in list(self.problem.G.neighbors(current_event)):
+                if neighbor_id in moves: continue
+                if self.solution_set[neighbor_id]['R']==new_room:
+                    kc.put(neighbor_id)
+        
+        return moves
+
+    def kick(self):
+        event_id=random.choice(list(self.solution_set.keys()))
+        event_id2=random.choice(list(self.solution_set.keys()))
+        random.seed=int(time.time())
+        shuffle_slots=self.problem.event_available_rooms[event_id2]
+        random.shuffle(shuffle_slots)
+        
+        while event_id==event_id2:
+            event_id2=random.choice(list(self.solution_set.keys()))
+        
+        if self.solution_set[event_id2]['R'] not in self.problem.event_available_rooms[event_id]:
+            return dict()
+
+        candicate_move=dict()
+        if self.can_be_moved(wise='room',excluded=[event_id2],room=self.solution_set[event_id2]['R'],period=self.solution_set[event_id]['P']):
+            candicate_move[event_id]=(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R'])
+        
+        complete_kick_move=False
+        for room_id in shuffle_slots:
+            if room_id==self.solution_set[event_id2]['R']: continue
+            if self.can_be_moved(wise='room',room=room_id,period=self.solution_set[event_id]['P']):
+                candicate_move[event_id2]=(self.solution_set[event_id2]['P'],room_id)
+                complete_kick_move=True
+                break
+        
+        if complete_kick_move:
+            return candicate_move
+        return dict()
+
+    def operator(self):
+        random_move=random.randint(1,4)
+        if random_move==1:
+            return self.transfer()
+        elif random_move==2:
+            return self.swap()
+        elif random_move==3:
+            return self.kempe_chain()
+        elif random_move==4:
+            return self.kick()
 
