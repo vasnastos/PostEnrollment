@@ -1,6 +1,6 @@
 from ortools.sat.python import cp_model
 import docplex.cp.model as cpx
-from pe import Problem,PRF
+from pe import Problem,PRF,Solution
 import os,pickle
 from itertools import combinations,product
 import gurobipy as gp
@@ -195,7 +195,54 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
     elif csolver=='gurobi':
         # Gurobi solver
         model=gp.Model(name="Gurobi_post_enrollment")
-        # xvars=model.addVars(list(product(eset)))
+        xvars=model.addVars([(event_id,room_id,period_id) for event_id in range(problem.E) for room_id in range(problem.R) for period_id in range(problem.P)],vtype=gp.GRB.BINARY,name='xvars')
+
+        for event_id in range(problem.E):
+            model.addConstr(
+                xvars.sum(event_id,'*','*')==1,name=f'Constr_{event_id}'
+            )
+        
+        for event_id in range(problem.E):
+            for room_id in range(problem.R):
+                if room_id not in problem.event_available_rooms[event_id]:
+                    model.addConstr(
+                        xvars.sum(event_id,room_id,'*')==0
+                    )
+        
+            for period_id in range(problem.P):
+                if period_id not in problem.event_available_periods[event_id]:
+                    model.addConstr(
+                        xvars.sum(event_id,'*',period_id)==0,name=f'Period_Constr_{event_id}'
+                    )
+        
+        for room_id in range(problem.R):
+            for period_id in range(problem.P):
+                model.addConstr(
+                    xvars.sum('*',room_id,period_id)<=1,name=f'room_period_Constr_({room_id},{period_id})'
+                )
+        
+        for event_id in range(problem.E):
+            for event_id2 in problem.G.neighbors(event_id):
+                for period_id in range(problem.P):
+                    model.addConstr(
+                        xvars.sum(event_id,'*',period_id)
+                        +xvars.sum(event_id2,'*',period_id)<=1
+                    )
+        if PRF.has_extra_constraints(problem.formulation):
+            for event_id in range(problem.E):
+                for event_id2 in problem.events[event_id]['HPE']:
+                    model.addConstr(
+                        sum([xvars[(event_id,room_id,period_id)]*period_id for room_id in range(problem.R) for period_id in range(problem.P)])<
+                        sum([xvars[(event_id2,room_id,period_id)]*period_id for room_id in range(problem.R) for period_id in range(problem.P)])
+                    )
+        
+        model.Params.TimeLimit=timesol
+        model.Params.Threads=os.cpu_count()
+        model.optimize()
+
+        for (event_id,room_id,period_id),decision_var in xvars.items():
+            if decision_var.X==1:
+                generated_solution[event_id]=(period_id,room_id)
     
     # save options
     if save=='txt':
@@ -207,9 +254,9 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
             pickle.dump(generated_solution,writer)
 
     return generated_solution
-    
-def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,days_combined=False,full=False,timesol=600,**kwargs):
 
+
+def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,days_combined=False,full=False,timesol=600,**kwargs):
     if sum([day_by_day,full,days_combined])==0:
         raise ValueError("Both day_by_day and full params setted to False.\n You should set one of the parameters in True")
     elif sum([day_by_day,full])>1:
@@ -417,7 +464,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
 
             consecutive_events={ecombination:model.NewBoolVar(name=f'{"_".join(list(ecombination))}') for ecombination in event_combinations}
 
-            for ecombination in consecutive_events.keys():
+            for ecombination in event_combinations.keys():
                 for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-3):
                     model.Add(
                         sum([
@@ -563,29 +610,20 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                 for room_id in range(problem.R):
                     if room_id in problem.event_available_periods[event_id]:
                         model.addConstr(
-                            sum([
-                                xvars[(event_id,room_id,period_id)]
-                                for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)
-                            ])==0,name=f'EC2_{event_id}_{room_id}_{period_id}'
+                            xvars.sum(event_id,room_id,'*')==0,name=f'EC2_{event_id}_{room_id}_{period_id}'
                         )
                 
                 for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day):
                     if period_id not in problem.event_available_periods[event_id]:
                         model.addConstr(
-                            sum([
-                                xvars[(event_id,room_id,period_id)]
-                                for room_id in range(problem.R)
-                            ])==0,name=f'EC3_{period_id}'
+                            xvars.sum(event_id,'*',period_id)==0,name=f'EC3_{period_id}'
                         )
 
 
             for room_id in range(problem.R):
                 for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day):
                     model.addConstr(
-                        sum([
-                            xvars[(event_id,room_id,period_id)]
-                            for event_id in eset
-                        ])<=1,name=f'EC4_{room_id}_{period_id}'
+                        xvars.sum('*',room_id,period_id)<=1,name=f'EC4_{room_id}_{period_id}'
                     )
             
             for event_id in eset:
@@ -593,14 +631,8 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     if neighbor_id in eset:
                         for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day):
                             model.add(
-                                sum([
-                                    xvars[(event_id,room_id,period_id)]
-                                    for room_id in range(problem.R)
-                                ])
-                                +sum([
-                                    xvars[(neighbor_id,room_id,period_id)]
-                                    for room_id in range(problem.R)    
-                                ])<=1,name=f'EC5_{event_id}_{neighbor_id}_{period_id}'
+                                xvars.sum(event_id,'*',period_id)
+                                +xvars.sum(neighbor_id,'*',period_id)<=1,name=f'EC5_{event_id}_{neighbor_id}_{period_id}'
                             )
             
             if PRF.has_extra_constraints(problem.formulation):
@@ -628,9 +660,15 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                             for event_id in list(ecombination)
                             for room_id in range(problem.R)
                             for pid in range(period_id,period_id+3)
-                        ])<2+consecutive_events[ecombination].V
+                        ])<2+consecutive_events[ecombination]
                     )
             
+            objective=[
+                sum([consecutive_events[ecombination] * no_students for ecombination,no_students in event_combinations.items()]),
+                sum([xvars[(event_id,room_id)] for event_id in eset for room_id in range(problem.R)])
+            ]
+
+            model.setObjective(sum(objective))
             model.optimize()
 
             for (event_id,room_id,period_id),dvar in xvars.items():
@@ -641,6 +679,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
         if 'days' not in kwargs:
             raise ValueError("You did not provide the right amount of arguments in the solver")
         days=kwargs['days']
+        
         if 'solution_hint' not in kwargs:
             solution_hint=None
         else:
@@ -652,7 +691,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
             periods=[period_id for day in days for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)]
             xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'dv_{event_id}_{room_id}_{period_id}') for event_id in eset for room_id in range(problem.R) for period_id in periods}
             partial_student_set=set([student_id for event_id in eset for student_id in problem.events[event_id]['S']])
-            eset_combinations=[for ecombination in ]
+            shints=problem.create_hints(eset,solution_hint)
 
             for event_id,(period_id,room_id) in solution_hint.items():
                 model.AddHint(xvars[(event_id,room_id,period_id)],1)
@@ -724,7 +763,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                                     for room_id in range(problem.R)
                                     for period_id in periods
                                 ])<sum([
-                                    xvars[(event_id,room_id,period_id)]*period_id
+                                    xvars[(event_id2,room_id,period_id)]*period_id
                                     for room_id in range(problem.R)
                                     for period_id in periods
                                 ])
@@ -765,16 +804,40 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     for i in range(3,10):
                         for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-i+1):
                             if period_id>day*problem.periods_per_day:
-                                previous_period_cost=sum([for event_id])
-                            
+                                previous_period_cost=sum([xvars[(event_id,room_id,period_id-1)] for event_id in student_events_set for room_id in range(problem.R)])+shints[student_id][period_id-1]
+                            if period_id<day*problem.periods_per_day+problem.periods_per_day-i-1:
+                                next_period_cost=sum([xvars[(event_id,room_id,period_id+i)] for event_id in student_events_set for room_id in range(problem.R)])+shints[student_id][period_id]
+
                             model.Add(
-                                sum([
-                                    xvars[(event_id,room_id,period_id-1)]
+                                previous_period_cost
+                                -sum([
+                                    xvars[(event_id,room_id,pid)]
                                     for event_id in student_events_set
                                     for room_id in range(problem.R)
+                                    for pid in range(period_id,period_id+i)
+                                ])-sum([
+                                    shints[student_id][pid]
+                                    for pid in range(period_id,period_id+i)
                                 ])
+                                +next_period_cost>=-(i-1)
                             )
 
+            objective=[
+                sum([single_event_days[(student_id,day)] for student_id in partial_student_set for day in days]),
+                sum([consecutive_events[(student_id,day,i)]*(i-2) for student_id in partial_student_set for day in days for i in range(3,10)]),
+                sum([xvars[(event_id,room_id,period_id)]*len(problem.events[event_id]['S']) for event_id in eset for room_id in range(problem.R) for period_id in [day*problem.periods_per_day+problem.periods_per_day-1 for day in days]])
+            ]
+
+            model.Minimize(sum(objective))
+            solver=cp_model.CpSolver()
+            solver.parameters.num_search_workers=os.cpu_count()
+            solver.parameters.max_time_in_seconds=timesol
+            solver.parameters.log_search_progress=True
+            status=solver.Solve(model=model,solution_callback=cp_model.ObjectiveSolutionPrinter())
+            if status in [cp_model.OPTIMAL,cp_model.FEASIBLE]:
+                for (event_id,room_id,period_id),dvar in xvars.items():
+                    if solver.Value(dvar)==1:
+                        generated_solution[event_id]=(period_id,room_id)
 
     return generated_solution
 
@@ -874,8 +937,6 @@ def timeslot_block_reassignment(problem:Problem,events_in_timeblock:list,frozen_
     single_event_days={(student_id,day):model.NewBoolVar(name=f'SE_{student_id}_{day}') for student_id in partial_students_set for day in range(problem.days)}
     consecutive_events={(student_id,day,i):model.NewBoolVar(name=f'{student_id}_{day}_{i}') for student_id in partial_students_set for day in range(problem.days) for i in range(3,10)}
 
-
-
     for student_id in partial_students_set:
         for day in range(problem.days):
             model.Add(
@@ -933,22 +994,3 @@ def timeslot_block_reassignment(problem:Problem,events_in_timeblock:list,frozen_
             if solver.Value(dvar)==1:
                 solution_subset[event_id]=(period_id,room_id)
     return solution_subset
-
-
-def partial_room_solver(problem:"Problem",moves:dict,solution_hint=None):
-    periods=list(set(moves.values()))
-    
-    model=cp_model.CpModel()
-    sol_vars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in moves.keys() for room_id in range(problem.R) for period_id in periods}
-
-    for event_id,period_id in moves.items():
-        model.Add(
-            sum([sol_vars[(event_id,room_id,period_id)] for room_id in range(problem.R)])==1
-        )
-
-    for event_id,period_id in moves.items():
-        for period_id2 in periods:
-            if period_id==period_id2: continue
-            model.Add(
-                sum([sol_vars[(event_id,room_id,period_id2)] for room_id in range(problem.R)])==0
-            )

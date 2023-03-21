@@ -1,8 +1,7 @@
-from solution import Solution
 from rich.console import Console
 import random,time,math,sys,copy,math
 from queue import LifoQueue
-from pe import Problem
+from pe import Problem,Solution
 
 class Hill_ClimbingLA:
     def __init__(self,dataset_name:str,initial_threshold:int) -> None:
@@ -64,6 +63,7 @@ class SimulatedAnnealing:
         freeze=1.0
         console=Console(record=True)
 
+
         while True:
             moves=self.solution.select_operator()
             if moves=={}:
@@ -80,6 +80,7 @@ class SimulatedAnnealing:
             elif self.cost>best_cost:
                 delta=self.cost-previous_cost
                 if random.uniform(0,1)>math.exp(-delta/temperature):
+                    # Solution will be accepted
                     pass
                 else:
                     self.solution.rollback()
@@ -88,6 +89,7 @@ class SimulatedAnnealing:
             temperature*=alpha
             if temperature<freeze:
                 temperature=start_temperature * random.uniform(0,2)
+                
                 console.print(f'[bold red]Temperature reheating:{temperature}')
             
             if time.time()-start_timer>timesol:
@@ -228,7 +230,7 @@ class TabuSearch:
         memory=dict()
         start_timer=time.time()
         console.rule('[bold red] Tabu Search Initial Solution')
-
+        obj=lambda unplacedE_val:len(unplacedE)
 
         while len(unplacedE)!=0:
             minimum_cost=sys.maxsize
@@ -246,7 +248,7 @@ class TabuSearch:
                             if neighbor_id not in unplacedE_copy:
                                 unplacedE_copy.append(neighbor_id)
                         
-                        if len(unplacedE)<minimum_cost and current_solution not in tabu_list:
+                        if obj(unplacedE)<minimum_cost and current_solution not in tabu_list:
                             best_event=event_id
                             best_slot=timeslot
                             minimum_cost=len(unplacedE_copy)
@@ -266,8 +268,8 @@ class TabuSearch:
                         current_solution.pop(neighbor_id)
                         unplacedE_copy.append(neighbor_id)
                 
-                if len(unplacedE_copy)<current_best_objective:
-                    current_best_objective=len(unplacedE_copy)
+                if obj(unplacedE_copy)<current_best_objective:
+                    current_best_objective=obj(unplacedE_copy)
                     current_solution[best_event]=best_slot
                     for neighbor_id in self.solution.problem.neighbors(best_event):
                         if neighbor_id in current_solution:
@@ -338,6 +340,7 @@ class TabuSearch:
                 if neighbor_id not in unplacedE:
                     unplacedE.append(neighbor_id)
             
+            i+=1
             if i==ITER:
                 for event_id,period_id in current_solution.items():
                     self.modify(event_id,period_id,wise='period')
@@ -345,7 +348,6 @@ class TabuSearch:
                 self.Perturb()
                 i=0
                 tabu_list.clear() 
-            i+=1
             if time.time()-start_time>timesol:
                 break
     
