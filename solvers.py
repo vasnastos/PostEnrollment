@@ -5,9 +5,32 @@ import os,pickle
 from itertools import combinations,product
 import gurobipy as gp
 
-SOLVER=None
+class SolverInfo:
+    instance=None
+    @staticmethod
+    def get_instance():
+        if SolverInfo.instance==None:
+            SolverInfo.instance=SolverInfo("",None)
+        return SolverInfo.instance
 
-def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
+    def __init__(self,solution_description,solver_type):
+        self.description=solution_description
+        self.stype=solver_type
+    
+    def set_params(self,description=None,solvertype=None):
+        if description:
+            self.description=description
+        if solvertype:
+            self.stype=solvertype
+    
+    def get_solver_type(self):
+        return self.stype
+
+    def get_solution_info(self):
+        return self.description
+
+
+def create_timetable(problem:"Problem",csolver='cp-sat',timesol=600):
     """
         Initial solution creator. It constructs 3 different solutions using 3 different models(cp-sat,cplex-Cp and gurobi-mip)
         Parameters:
@@ -18,7 +41,9 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
         Returns:
             - dict: contains the generated timetable
     """
-    SOLVER=f"Initial_Solution_Constructor-{csolver}"
+    sparams=SolverInfo.get_instance()
+    sparams.set_params(description="Initial_Timetable_Construction",solvertype=csolver)
+
     generated_solution={}
     if csolver=='cp-sat':
         model=cp_model.CpModel()
@@ -242,146 +267,145 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
         model.Params.Threads=os.cpu_count()
         model.optimize()
 
-        if model.Status in [gp.GRB.OPTIMAL,gp.GRB.FEASIBLE]:
+        if model.Status in [gp.GRB.OPTIMAL,not gp.GRB.INFEASIBLE]:
             for (event_id,room_id,period_id),decision_var in xvars.items():
                 if decision_var.X==1:
                     generated_solution[event_id]=(period_id,room_id)
-    
-    # save options
-    if save=='txt':
-        with open(os.path.join('','results','OR-tools',f'{problem.id}.sol'),'w') as writer:
-            for event_id,(period_id,room_id) in generated_solution.items():
-                writer.write(f'{event_id} {period_id} {room_id}')
-    elif save=='pickle':
-        with open(os.path.join('','results','OR-tools',f'{problem.id}.pcl_sol'),'wb') as writer:
-            pickle.dump(generated_solution,writer)
 
     return generated_solution
 
 
-def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,days_combined=False,full=False,timesol=600,**kwargs):
+def solve(problem:"Problem",tsolver='cp-sat',day_by_day=False,days_combined=False,full=False,timesol=600,**kwargs):
+    sparams=SolverInfo.get_instance()
+    sparams.set_params(solvertype=tsolver)
+    generated_solution=dict()
+
     if sum([day_by_day,full,days_combined])==0:
         raise ValueError("Both day_by_day and full params setted to False.\n You should set one of the parameters in True")
     elif sum([day_by_day,full])>1:
         raise ValueError("You set day_by_day and full solver to True. You must select one of the solvers to use")
 
-    generated_solution=dict()
 
-    if tsolver=="cpsat" and full:
-        model=cp_model.CpModel()
-        xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in range(problem.E) for room_id in range(problem.R) for period_id in range(problem.P)}
+    if full:
+        if tsolver=='cp-sat':
+            model=cp_model.CpModel()
+            xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in range(problem.E) for room_id in range(problem.R) for period_id in range(problem.P)}
+            
+            solution_hint=None
+            if 'solution_hint' in kwargs:
+                solution_hint=kwargs['solution_hint']
 
-        # Add hint to the solution
-        if solution_hint:
-            for event_id,(period_id,room_id) in solution_hint.items():
-                model.AddHint(xvars[(event_id,room_id,period_id)],1)
+            # Add hint to the solution
+            if solution_hint:
+                for event_id,(period_id,room_id) in solution_hint.items():
+                    model.AddHint(xvars[(event_id,room_id,period_id)],1)
 
-        # Constraints
-        for event_id in range(problem.E):
-            model.Add(
-                sum([xvars[(event_id,room_id,period_id)] for room_id in range(problem.R) for period_id in range(problem.P)])==1
-            )
-        
-        for event_id in range(problem.E):
+            # Constraints
+            for event_id in range(problem.E):
+                model.Add(
+                    sum([xvars[(event_id,room_id,period_id)] for room_id in range(problem.R) for period_id in range(problem.P)])==1
+                )
+            
+            for event_id in range(problem.E):
+                for room_id in range(problem.R):
+                    if room_id in problem.event_available_rooms[event_id]:
+                        continue
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)] for period_id in range(problem.P)
+                        ])==0
+                    )
+
             for room_id in range(problem.R):
-                if room_id in problem.event_available_rooms[event_id]:
-                    continue
-                model.Add(
-                    sum([
-                        xvars[(event_id,room_id,period_id)] for period_id in range(problem.P)
-                    ])==0
-                )
-
-        for room_id in range(problem.R):
-            for period_id in range(problem.P):
-                model.Add(
-                    sum([xvars[(event_id,room_id,period_id)] for event_id in range(problem.E)])
-                    <=1
-                )
-        
-        for event_id in range(problem.E):
-            for event_id2 in problem.G.neighbors(event_id):
                 for period_id in range(problem.P):
                     model.Add(
-                        sum([xvars[(event_id,room_id,period_id)] for room_id in range(problem.R)])
-                        +sum([xvars[(event_id2,room_id,period_id)] for room_id in range(problem.R)])
+                        sum([xvars[(event_id,room_id,period_id)] for event_id in range(problem.E)])
                         <=1
                     )
-        
-        if PRF.has_extra_constraints(problem.formulation):
-            for period_id in range(problem.P):
-                if period_id in problem.event_available_periods[event_id]:
-                    continue
-                model.Add(
-                    sum([
-                        xvars[(event_id,room_id,period_id)] for event_id in range(problem.E) for room_id in range(problem.R)
-                    ])==0
-                )
-
+            
             for event_id in range(problem.E):
-                for event_id2 in problem.events[event_id]['HPE']:
+                for event_id2 in problem.G.neighbors(event_id):
+                    for period_id in range(problem.P):
+                        model.Add(
+                            sum([xvars[(event_id,room_id,period_id)] for room_id in range(problem.R)])
+                            +sum([xvars[(event_id2,room_id,period_id)] for room_id in range(problem.R)])
+                            <=1
+                        )
+            
+            if PRF.has_extra_constraints(problem.formulation):
+                for period_id in range(problem.P):
+                    if period_id in problem.event_available_periods[event_id]:
+                        continue
                     model.Add(
-                        sum([xvars[(event_id,room_id,period_id)]*period_id for room_id in range(problem.R) for period_id in range(problem.P)])<
-                        sum([xvars[(event_id2,room_id,period_id)]*period_id for room_id in range(problem.R) for period_id in range(problem.P)])
+                        sum([
+                            xvars[(event_id,room_id,period_id)] for event_id in range(problem.E) for room_id in range(problem.R)
+                        ])==0
                     )
-        
-        single_event_days={(student_id,day):model.NewBoolVar(name=f'{student_id}_{day}') for student_id in range(problem.S) for day in range(problem.days)}
-        consecutive_events={combination:model.NewBoolVar(name=f'ecombination_{combination}') for combination in problem.event_combinations}
 
-        # Soft constraints 
-        # 1. Single event days
-        for student_id in range(problem.S):
-            for day in range(problem.days):
-                model.Add(
-                    sum([
-                        xvars[(event_id,room_id,period_id)]
-                        for event_id in range(problem.E)
-                        for room_id in range(problem.R)
-                        for period_id in range(day * problem.periods_per_day,day * problem.periods_per_day+problem.periods_per_day)
-                    ])==1
-                ).OnlyEnforceIf(single_event_days[(student_id,day)])
+                for event_id in range(problem.E):
+                    for event_id2 in problem.events[event_id]['HPE']:
+                        model.Add(
+                            sum([xvars[(event_id,room_id,period_id)]*period_id for room_id in range(problem.R) for period_id in range(problem.P)])<
+                            sum([xvars[(event_id2,room_id,period_id)]*period_id for room_id in range(problem.R) for period_id in range(problem.P)])
+                        )
+            
+            single_event_days={(student_id,day):model.NewBoolVar(name=f'{student_id}_{day}') for student_id in range(problem.S) for day in range(problem.days)}
+            consecutive_events={combination:model.NewBoolVar(name=f'ecombination_{combination}') for combination in problem.event_combinations}
 
-                model.Add(
-                    sum([
-                        xvars[(event_id,room_id,period_id)]
-                        for event_id in range(problem.E)
-                        for room_id in range(problem.R)
-                        for period_id in range(day * problem.periods_per_day,day * problem.periods_per_day+problem.periods_per_day)
-                    ])!=1
-                ).OnlyEnforceIf(single_event_days[(student_id,day)].Not())
-        
-        # 2. consecutive events
-        for ecombination in problem.event_combinations:
-            for day in range(problem.days):
-                for pcons in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-3):
+            # Soft constraints 
+            # 1. Single event days
+            for student_id in range(problem.S):
+                for day in range(problem.days):
                     model.Add(
                         sum([
                             xvars[(event_id,room_id,period_id)]
-                            for event_id in ecombination
+                            for event_id in range(problem.E)
                             for room_id in range(problem.R)
-                            for period_id in range(pcons,pcons+3)
-                        ])<=2+consecutive_events[ecombination]
-                    )
-        
-        objective=[
-            sum([single_event_days[(student_id,day)] for student_id in range(problem.S) for day in range(problem.days)]),
-            sum([consecutive_events[ecombination] * no_students for ecombination,no_students in problem.event_combinations.items()]),
-            sum([xvars[(event_id,room_id,period_id)]*len(problem.events[event_id]['S']) for event_id in range(problem.E) for room_id in range(problem.R) for period_id in problem.last_period_per_day])
-        ]
+                            for period_id in range(day * problem.periods_per_day,day * problem.periods_per_day+problem.periods_per_day)
+                        ])==1
+                    ).OnlyEnforceIf(single_event_days[(student_id,day)])
 
-        model.Minimize(sum(objective))
+                    model.Add(
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in range(problem.E)
+                            for room_id in range(problem.R)
+                            for period_id in range(day * problem.periods_per_day,day * problem.periods_per_day+problem.periods_per_day)
+                        ])!=1
+                    ).OnlyEnforceIf(single_event_days[(student_id,day)].Not())
+            
+            # 2. consecutive events
+            for ecombination in problem.event_combinations:
+                for day in range(problem.days):
+                    for pcons in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-3):
+                        model.Add(
+                            sum([
+                                xvars[(event_id,room_id,period_id)]
+                                for event_id in ecombination
+                                for room_id in range(problem.R)
+                                for period_id in range(pcons,pcons+3)
+                            ])<=2+consecutive_events[ecombination]
+                        )
+            
+            objective=[
+                sum([single_event_days[(student_id,day)] for student_id in range(problem.S) for day in range(problem.days)]),
+                sum([consecutive_events[ecombination] * no_students for ecombination,no_students in problem.event_combinations.items()]),
+                sum([xvars[(event_id,room_id,period_id)]*len(problem.events[event_id]['S']) for event_id in range(problem.E) for room_id in range(problem.R) for period_id in problem.last_period_per_day])
+            ]
 
-        solver=cp_model.CpSolver()
-        solver.parameters.max_time_in_seconds=timesol
-        solver.parameters.num_search_workers=os.cpu_count()
-        status=solver.Solve(model)
-        if status in [cp_model.OPTIMAL,cp_model.FEASIBLE]:
-            for (event_id,room_id,period_id),dvar in xvars.items():
-                if solver.Value(dvar)==1:
-                    generated_solution[event_id]=(period_id,room_id)
+            model.Minimize(sum(objective))
+
+            solver=cp_model.CpSolver()
+            solver.parameters.max_time_in_seconds=timesol
+            solver.parameters.num_search_workers=os.cpu_count()
+            status=solver.Solve(model)
+            if status in [cp_model.OPTIMAL,cp_model.FEASIBLE]:
+                for (event_id,room_id,period_id),dvar in xvars.items():
+                    if solver.Value(dvar)==1:
+                        generated_solution[event_id]=(period_id,room_id)
     
     elif day_by_day:
-        SOLVER=f"Day_by_day_optimizer-{tsolver}"
+        sparams.set_params(description="Day_by_day_optimizer")
         if 'day' not in kwargs:
             raise ValueError("Day-by-Day solver called and no day provided")
         if 'solution_hint' not in kwargs:
@@ -389,9 +413,8 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
         
         day=int(kwargs['day'])
         solution_hint=kwargs['solution_hint']
-        eset=[event_id for event_id,(period_id,_) in solution_hint.items() if period_id//problem.periods_per_day==day]
-        event_combinations={frozenset(ecombination):problem.event_combinations[frozenset(ecombination)] for ecombination in combinations(eset) if frozenset(ecombination) in problem.event_combinations}
-
+        eset=[event_id for event_id,sol_params in solution_hint.items() if sol_params['P']//problem.periods_per_day==day]
+        event_combinations={frozenset(ecombination):problem.event_combinations[frozenset(ecombination)] for ecombination in combinations(eset,3) if frozenset(ecombination) in problem.event_combinations}
 
         if tsolver=='cp-sat':
             model=cp_model.CpModel()
@@ -402,13 +425,13 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     sum([
                         xvars[(event_id,room_id,period_id)]
                         for room_id in range(problem.R)
-                        for period_id in range(problem.P)
+                        for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)
                     ])==1
                 )
             
             for event_id in eset:
                 for room_id in range(problem.R):
-                    if room_id in problem.event_available_periods[event_id]:
+                    if room_id not in problem.event_available_periods[event_id]:
                         model.Add(
                             sum([
                                 xvars[(event_id,room_id,period_id)]
@@ -458,7 +481,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                                 sum([
                                     xvars[(event_id,room_id,period_id)]
                                     for room_id in range(problem.R)
-                                    for period_id in range(problem.P)
+                                    for period_id in range(day*problem.periods_per_day,day * problem.periods_per_day+problem.periods_per_day)
                                 ])<sum([
                                     xvars[(event_id2,room_id,period_id)]
                                     for room_id in range(problem.R)
@@ -466,17 +489,17 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                                 ])
                             )
 
-            consecutive_events={ecombination:model.NewBoolVar(name=f'{"_".join(list(ecombination))}') for ecombination in event_combinations}
+            consecutive_events={ecombination:model.NewBoolVar(name=f'{"_".join(list([str(x) for x in ecombination]))}') for ecombination in event_combinations}
 
             for ecombination in event_combinations.keys():
-                for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-3):
+                for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-3):                    
                     model.Add(
                         sum([
                             xvars[(event_id,room_id,pid)]
                             for event_id in ecombination
                             for room_id in range(problem.R)
                             for pid in range(period_id,period_id+3)
-                        ])<2+consecutive_events[ecombination]
+                        ])<=2+consecutive_events[ecombination]
                     )
             
             objective=[
@@ -488,8 +511,9 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
             solver=cp_model.CpSolver()
             solver.parameters.max_time_in_seconds=timesol
             solver.parameters.num_search_workers=os.cpu_count()
-            solver.parameters.log_search_progress=True
+            # solver.parameters.log_search_progress=True
             status=solver.Solve(model=model,solution_callback=cp_model.ObjectiveSolutionPrinter())
+            
             if status in [cp_model.OPTIMAL,cp_model.FEASIBLE]:
                 for (event_id,room_id,period_id),dvar in xvars.items():
                     if solver.Value(dvar)==1:
@@ -504,7 +528,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     sum([
                         xvars[(event_id,room_id,period_id)]
                         for room_id in range(problem.R)
-                        for period_id in range(problem.P)
+                        for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)
                     ])==1
                 )
             
@@ -669,7 +693,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
             
             objective=[
                 sum([consecutive_events[ecombination] * no_students for ecombination,no_students in event_combinations.items()]),
-                sum([xvars[(event_id,room_id)] for event_id in eset for room_id in range(problem.R)])
+                sum([xvars[(event_id,room_id,day*problem.periods_per_day+problem.periods_per_day-1)] for event_id in eset for room_id in range(problem.R)])
             ]
 
             model.setObjective(sum(objective))
@@ -680,7 +704,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     generated_solution[event_id]=(period_id,room_id)
     
     elif days_combined:
-        SOLVER=f'Days_combined_optimizer-{tsolver}'
+        sparams.set_params(description='Days_combined_optimizer')
         if 'days' not in kwargs:
             raise ValueError("You did not provide the right amount of arguments in the solver")
         days=kwargs['days']
@@ -692,7 +716,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
 
         if tsolver=='cp-sat':
             model=cp_model.CpModel()
-            eset=[event_id for event_id,(period_id,_) in solution_hint.items() if period_id//problem.periods_per_day in days]
+            eset=[event_id for event_id,sol_params in solution_hint.items() if sol_params['P']//problem.periods_per_day in days]
             periods=[period_id for day in days for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)]
             xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'dv_{event_id}_{room_id}_{period_id}') for event_id in eset for room_id in range(problem.R) for period_id in periods}
             partial_student_set=set([student_id for event_id in eset for student_id in problem.events[event_id]['S']])

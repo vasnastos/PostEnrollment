@@ -2,7 +2,8 @@ from rich.console import Console
 import random,time,math,sys,copy,math
 from queue import LifoQueue
 from pe import Problem,Solution
-from solvers import create_timetable,solve,SOLVER
+from solvers import create_timetable,solve,SolverInfo
+import os,pickle
 
 class Hill_ClimbingLA:
     def __init__(self,dataset_name:str,initial_threshold:int) -> None:
@@ -44,7 +45,7 @@ class Hill_ClimbingLA:
             if self.threshold>=1e10:
                 break 
             
-            if time.time()-start_timer:
+            if time.time()-start_timer>timesol:
                 console.print("[blue]Time stop criterio exceeded!!!")
                 break
 
@@ -61,30 +62,37 @@ class SimulatedAnnealing:
         init_sol=create_timetable(problem=self.solution.problem,csolver='gurobi',timesol=600)
         if init_sol!={}:
             self.solution.set_solution(init_sol)
-        self.console.rule('Day by day Optimization')
-        for i in range(self.solution.problem.days):
-            init_sol=solve(problem=self.solution.problem,day_by_day=True,day=i)
-            if init_sol!={}:
-                self.solution.set_solution(init_sol)
-            self.console.print(f'Day by day improvement| Day:{i}\tCost:{self.solution.compute_cost()}')
+        self.solution.validator()
+        os.system("pause")
+        # self.solution.save(filepath=os.path.join('','results','initial_solutions',f'{self.solution.problem.id}_{instance.get_solver_type()}.txt'))
+        # self.console.rule('Day by day Optimization')
+        # for i in range(self.solution.problem.days):
+        #     self.console.print(f'Day by day improvement| Day:{i}\tCost:{self.solution.compute_daily_cost(i)}')
+        #     init_sol=solve(problem=self.solution.problem,day_by_day=True,timesol=60,solution_hint=self.solution.solution_set,day=i)
+        #     if init_sol!={}:
+        #         self.solution.set_solution(init_sol)
+
+        # with open(os.path.join('','results','initial_solutions',f'{self.solution.problem.id}_{instance.get_solver_type()}_{self.solution.compute_cost()}.txt'),'w') as writer:
+        #     for _,sol_params in self.solution.solution_set.items():
+        #         writer.write(f'{sol_params["P"]} {sol_params["R"]}\n')
 
     def solve(self,temperature=1000,alpha=0.9999,timesol=1000):
-        start_temperature=temperature
-        start_timer=time.time()
-        best_cost=self.cost
-        best_solution=self.solution.solution_set
-        freeze=1.0
-        
-        
         self.preprocessing()
         self.console.print(f'Initial Cost after preprocessing stage:{self.solution.cost}')
         self.console.print(f'Temperature:{temperature}')
         self.console.print(f'Alpha:{alpha}')
         self.console.print(f'Solution TimeLimit:{timesol+600+60*5}')
-
+        instance=SolverInfo.get_instance()
+        start_temperature=temperature
+        start_timer=time.time()
+        best_cost=self.solution.cost
+        best_solution=self.solution.solution_set
+        iter_id=0
+        freeze=1.0
 
         while True:
-            moves=self.solution.select_operator()
+            moves,move_name=self.solution.select_operator()
+            print(move_name)
             if moves=={}:
                 if time.time()-start_timer>timesol:
                     break
@@ -92,24 +100,31 @@ class SimulatedAnnealing:
                 
             self.solution.reposition(moves)
 
-            previous_cost=self.cost
-            if self.cost<best_cost:
+            previous_cost=self.solution.cost
+            if self.solution.cost<best_cost:
                 best_solution=self.solution.solution_set
-                best_cost=self.cost
-                self.console.print(f'[bold green]New solution found Cost:{best_cost}\tT:{temperature}')
-            elif self.cost>best_cost:
-                delta=self.cost-previous_cost
+                best_cost=self.solution.cost
+                self.console.print(f'[bold green]New solution found Cost:{best_cost}\tT:{temperature}\tMove:{move_name}')
+                self.solution.validator()
+                iter_id+=1
+            elif self.solution.cost>best_cost:
+                delta=self.solution.cost-previous_cost
                 if random.uniform(0,1)<math.exp(-delta/temperature):
-                    # Solution will be accepted\Metropolis criterion
+                    self.solution.validator()
+                    # Solution will be accepted|Metropolis criterion
                     pass
                 else:
                     self.solution.rollback()
-            
+                iter_id+=1
+            else:
+                iter_id+=1
+
+            if iter_id>10:
+                break
             temperature*=alpha
             if temperature<freeze:
                 temperature=start_temperature * random.uniform(0,2)
                 self.console.print(f'[bold red]Temperature reheating:{temperature}')
-
                 selection_criterion=random.uniform(0,1)
 
                 if selection_criterion<0.3:
@@ -119,7 +134,7 @@ class SimulatedAnnealing:
                         self.solution.set_solution(partial_solution)
                         best_solution=self.solution.solution_set
                         best_cost=self.solution.cost
-                        self.console.print('[bold green]')
+                        self.console.print(f'[bold green]Best solution found| Solver:{instance.get_solution_info()}\tCost:{self.solution.cost}')
 
                 else:
                     daily_costs=list(sorted({day:self.solution.compute_daily_cost(day) for day in range(self.solution.problem.days)}.items(),key=lambda x:x[1]))
@@ -128,14 +143,18 @@ class SimulatedAnnealing:
                     partial_solution=solve(problem=self.solution.problem,days_combined=True,timesol=200,days=days)
                     if partial_solution!={}:
                         self.solution.set_solution(partial_solution)
-                        self.console.print(f'[bold green]New Solution generated\tSolver Used:{SOLVER}\tDays feeded in solver:{days}\tCost:{self.solution.cost}')
+                        self.console.print(f'[bold green]New Solution generated\tSolver:{instance.get_solution_info()}\tDays feeded in solver:{days}\tCost:{self.solution.cost}')
                         best_solution=self.solution.solution_set
                         best_cost=self.solution.cost
 
             if time.time()-start_timer>timesol:
                 self.console.print('Procedure ended!!! Exit Simulated Annealing')
                 break
+        self.solution.save(filepath=os.path.join('','results','simulated_annealing',f'{self.solution.problem.id}_{instance.get_solver_type()}_{self.solution.cost}.sol'))
 
+
+
+# Tabu search- Not working
 class TabuSearch:
     def __init__(self,filename):
         self.problem=Problem()

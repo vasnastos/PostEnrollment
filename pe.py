@@ -205,6 +205,7 @@ class Problem:
         console.print(f'[bold green]Average room size:{self.average_room_size}')
         console.print(f'[bold green]Average room suitability:{self.average_room_suitability}')
         console.print(f'[bold green]Average event period unavailability:{self.average_event_period_unavailability}',end='\n\n')
+        console.print(f'[bold green] Has precedence')
 
     def student_enrollment(self):
         """
@@ -261,10 +262,10 @@ class Solution:
     def compute_cost(self):
         ecost=0
         # Cost computation calculation
-        for student_id in range(self.S):
+        for student_id in range(self.problem.S):
             consecutive=0
-            student_participate_in=set([self.solution_set[event_id]["P"] for event_id in self.students[student_id]])
-            for day in range(self.days):
+            student_participate_in=set([self.solution_set[event_id]["P"] for event_id in self.problem.students[student_id]])
+            for day in range(self.problem.days):
                 day_events=0
                 for period_id in range(day * self.problem.periods_per_day,day * self.problem.periods_per_day+self.problem.periods_per_day):
                     if period_id in student_participate_in:
@@ -282,7 +283,7 @@ class Solution:
                 if day_events==1:
                     ecost+=1
         
-        for event_id in range(self.E):
+        for event_id in range(self.problem.E):
             if self.solution_set[event_id]['P'] in self.problem.last_period_per_day:
                 ecost+=len(self.problem.events[event_id]['S'])
 
@@ -304,25 +305,45 @@ class Solution:
                         consecutive=0
         return ecost        
 
+    def compute_daily_cost(self,day):
+        day_events=[event_id for event_id,sol_params in self.solution_set.items() if sol_params['P']//self.problem.periods_per_day==day]
+        students_in_events=list(set([student_id for event_id in day_events for student_id in self.problem.events[event_id]['S']]))
+
+        dcost=0
+        for student_id in students_in_events:
+            consecutive=0
+            periods_in_day=[self.solution_set[event_id]['P'] for event_id in self.problem.students[student_id] if event_id in day_events]
+            for period_id in range(day*self.problem.periods_per_day,day*self.problem.periods_per_day+self.problem.periods_per_day):
+                if period_id in periods_in_day:
+                    consecutive+=1
+                else:
+                    if consecutive>2:
+                        dcost+=(consecutive-2)
+                    consecutive=0
+            if consecutive>2:
+                dcost+=(consecutive-2)
+            dcost+=(len(periods_in_day)==1)
+        dcost+=sum([len(self.problem.events[event_id]['S']) for event_id in day_events if self.solution_set[event_id]['P']==day*self.problem.periods_per_day+self.problem.periods_per_day-1])
+        return dcost
+
     def can_be_moved(self,event_id,period_id,excluded=[]):
-        for neighbor_id in self.problem.G.neighbors(event_id):
+        if period_id not in self.problem.event_available_periods[event_id]:
+            return False
+        for neighbor_id in list(self.problem.G.neighbors(event_id)):
             if neighbor_id in excluded: continue
             if period_id==self.solution_set[neighbor_id]['P']:
                 return False
-        
-        for event_id2 in self.problem.events[event_id]['HPE']:
-            if period_id>self.solution_set[event_id2]['P']:
-                return False
+        if PRF.has_extra_constraints(self.problem.formulation):
+            for event_id2 in self.problem.events[event_id]['HPE']:
+                if period_id>=self.solution_set[event_id2]['P']:
+                    return False
         return True
 
     def room_available(self,period_id,room_id,excluded=[]):
-        if room_id not in self.problem.event_available_rooms[event_id]:
-            return False
-
-        for event_id in self.roomwise_solutions[room_id]:
-            if event_id in excluded:
+        for event_id2 in self.roomwise_solutions[room_id]:
+            if event_id2 in excluded:
                 continue
-            if period_id==self.solution_set[event_id]['P']:
+            if period_id==self.solution_set[event_id2]['P']:
                 return False
         return True
 
@@ -332,14 +353,15 @@ class Solution:
         day=period_id//self.problem.periods_per_day
 
         for student_id in event_students:
+    
             student_periods=[self.solution_set[event_id2]['P'] for event_id2 in self.problem.students[student_id]]
-            events_in_days=Counter([period_id//self.problem.periods_per_day for period_id in  student_periods])
+            events_in_days=Counter([period_id//self.problem.periods_per_day for period_id in student_periods])
 
-            if events_in_days.get(day,-1)==0:
+            if events_in_days.get(day,0)==0:
                 partial_cost+=1
                 continue
             
-            elif events_in_days.get(day,-1)==1 and student_periods[0]!=period_id:
+            elif events_in_days.get(day,0)==1 and student_periods[0]!=period_id:
                 partial_cost-=1
                 continue
             
@@ -359,7 +381,6 @@ class Solution:
             # B. Find the consecutive cost after the addition of an extra period
             consecutive=0
             student_periods.append(period_id)
-
             for pid in range(day * self.problem.periods_per_day, day * self.problem.periods_per_day+self.problem.periods_per_day):
                  if pid in student_periods:
                      consecutive+=1
@@ -384,18 +405,17 @@ class Solution:
     def unschedule(self,event_id):
         partial_cost=0
         event_students=self.problem.events[event_id]['S']
-        current_period=self.solution_set[event_id]['P']
-        day=current_period//self.problem.periods_per_day
-        events_in_day=Counter([self.solution_set[event_id2]['P'] for student_id in event_students for event_id2 in self.problem.students[student_id]])
-
-        if events_in_day.get(day,-1)==1:
-            partial_cost-=1
-        elif events_in_day.get(day,-1)==2:
-            partial_cost+=1
-        else:
-            # A. Find consecutive events before period deletion 
-            for student_id in event_students:
-                student_periods=[self.solution_set[event_id2]['P'] for event_id2 in self.problem.students[student_id]]
+        day=self.solution_set[event_id]['P']//self.problem.periods_per_day
+        
+        for student_id in event_students:
+            student_periods=[self.solution_set[event_id2]['P'] for event_id2 in self.problem.students[student_id]]
+            events_in_day=Counter([period_id//self.problem.periods_per_day for period_id in student_periods])
+            if events_in_day.get(day,0)==1:
+                partial_cost-=1
+            elif events_in_day.get(day,0)==2:
+                partial_cost+=1
+            else:
+                # A. Find consecutive events before period deletion 
                 consecutive=0
                 for period_id in range(day * self.problem.periods_per_day, day*self.problem.periods_per_day+self.problem.periods_per_day):
                     if period_id in student_periods:
@@ -409,7 +429,8 @@ class Solution:
 
                 # B. Find consecutive events after period removal
                 consecutive=0
-                student_periods.remove(period_id)
+                if self.solution_set[event_id]['P']!=-1:
+                    student_periods.remove(self.solution_set[event_id]['P'])
                 for period_id in range(day * self.problem.periods_per_day, day*self.problem.periods_per_day+self.problem.periods_per_day):
                     if period_id in student_periods:
                         consecutive+=1
@@ -422,30 +443,22 @@ class Solution:
                     partial_cost+=(consecutive-2)
                 consecutive=0
             
-            if self.solution_set[event_id]['P'] in self.problem.last_period_per_day:
-               partial_cost-=len(self.problem.events[event_id]['S']) 
+        if self.solution_set[event_id]['P'] in self.problem.last_period_per_day:
+            partial_cost-=len(self.problem.events[event_id]['S']) 
 
-        self.periodwise_solutions[self.solution_set[event_id]['P']].remove(event_id)
-        self.roomwise_solutions[self.solution_set[event_id]['R']].remove(event_id)
+        if self.solution_set[event_id]['P']!=-1:
+            self.periodwise_solutions[self.solution_set[event_id]['P']].remove(event_id)
+            self.roomwise_solutions[self.solution_set[event_id]['R']].remove(event_id)
         self.solution_set[event_id]['P']=-1
         self.solution_set[event_id]['R']=-1    
         return partial_cost
 
     def transfer_event(self):
-        event_id=random.rand_int(0,self.problem.E-1)
-        event_neighbors=self.problem.G.neighbors(event_id)
-        while len(event_neighbors)==0 or len(event_neighbors)==1:
-            event_id=random.rand_int(0,self.problem.E-1)
-            event_neighbors=self.problem.G.neighbors(event_id)
-
-        candicate_period=None
-        for neighbor_id in event_neighbors:
-            if self.can_be_moved(event_id,self.solution_set[neighbor_id]['P'],excluded=[neighbor_id]):
-                candicate_period=self.solution_set[neighbor_id]['P']
-                break
-        
-        if candicate_period:
-            for room_id in range(self.problem.R):
+        event_id=random.randint(0,self.problem.E-1)
+        candicate_period=random.randint(0,self.problem.P)
+    
+        if self.can_be_moved(event_id,candicate_period):
+            for room_id in self.problem.event_available_rooms[event_id]:
                 if self.room_available(room_id,candicate_period):
                     return {event_id:(candicate_period,room_id)}
 
@@ -453,65 +466,65 @@ class Solution:
     
     def swap_events(self):
         potential_move=dict()
-        event_id=random.rand_int(0,self.problem.E-1)
-        event_neighbors=self.problem.G.neighbors(event_id)
-        while len(neighbors)==0:
-            event_id=random.rand_int(0,self.problem.E-1)
-            neighbors=self.problem.G.neighbors(event_id)
-        
-        for event_id2 in event_neighbors:
-            if self.can_be_moved(event_id,self.solution_set[event_id2]['P'],excluded=[event_id2]) and self.can_be_moved(event_id2,self.solution_set[event_id]['P'],excluded=[event_id]):
-                # 1. Swap the rooms for two events
-                if self.solution_set[event_id2]['R'] in self.problem.event_available_rooms[event_id] and self.solution_set[event_id]['R'] in self.problem.event_available_rooms[event_id2]:
-                    return {
-                        event_id:(self.solution_set[event_id2]['P'],self.solution_set[event_id2]['R']),
-                        event_id2:(self.solution_set[event_id]['P'],self.solution_set[event_id]['R'])
-                    }
+        event_id=random.randint(0,self.problem.E-1)
+        event_id2=random.randint(0,self.problem.E-1)
+        while event_id==event_id2:
+            event_id2=random.randint(0,self.problem.E-1)
+
+
+        if self.can_be_moved(event_id,self.solution_set[event_id2]['P'],excluded=[event_id2]) and self.can_be_moved(event_id2,self.solution_set[event_id]['P'],excluded=[event_id]):
+            # 1. Swap the rooms for two events
+            if self.solution_set[event_id2]['R'] in self.problem.event_available_rooms[event_id] and self.solution_set[event_id]['R'] in self.problem.event_available_rooms[event_id2]:
+                return {
+                    event_id:(self.solution_set[event_id2]['P'],self.solution_set[event_id2]['R']),
+                    event_id2:(self.solution_set[event_id]['P'],self.solution_set[event_id]['R'])
+                }
+            
+            # 2. Keep the same rooms
+            elif self.room_available(self.solution_set[event_id2]['P'],self.solution_set[event_id]['R']) and self.room_available(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R']):
+                return {
+                    event_id:(self.solution_set[event_id2]['P'],self.solution_set[event_id]['R']),
+                    event_id2:(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R'])
+                }
+
+            # 3. Find a suitable room
+            else:
+                # event_id1 room
+                for room_id in self.problem.event_available_rooms[event_id]:
+                    if room_id in [self.solution_set[event_id]['R'],self.solution_set[event_id2]['R']]:
+                        continue
+                    if self.room_available(self.solution_set[event_id2]['P'],room_id):
+                        potential_move[event_id]=(self.solution_set[event_id2]['P'],room_id)
                 
-                # 2. Keep the same rooms
-                elif self.room_available(self.solution_set[event_id2]['P'],self.solution_set[event_id]['R']) and self.room_available(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R']):
-                    return {
-                        event_id:(self.solution_set[event_id2]['P'],self.solution_set[event_id]['R']),
-                        event_id2:(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R'])
-                    }
+                if event_id not in potential_move: 
+                    return dict()
 
-                # 3. Find a suitable room
-                else:
-                    # event_id1 room
-                    for room_id in self.problem.event_available_rooms[event_id]:
-                        if room_id in [self.solution_set[event_id]['R'],self.solution_set[event_id2]['R']]:
-                            continue
-                        if self.room_available(self.solution_set[event_id2]['P'],room_id):
-                            potential_move[event_id]=(self.solution_set[event_id2]['P'],room_id)
+                for room_id in self.problem.event_available_rooms[event_id2]:
+                    if room_id in [self.solution_set[event_id]['R'],self.solution_set[event_id2]['R']]:
+                        continue
+                    if self.room_available(self.solution_set[event_id]['P'],room_id):
+                        potential_move[event_id]=(self.solution_set[event_id2]['P'],room_id)
+
+                if event_id2 not in potential_move: 
+                    return dict()
                     
-                    if event_id not in potential_move: 
-                        potential_move.clear()
-                        continue
-
-                    for room_id in self.problem.event_available_rooms[event_id2]:
-                        if room_id in [self.solution_set[event_id][1],self.solution_set[event_id2]]:
-                            continue
-                        if self.room_available(self.solution_set[event_id][0],room_id):
-                            potential_move[event_id]=(self.solution_set[event_id2]['P'],room_id)
-
-                    if event_id2 not in potential_move: 
-                        potential_move.clear()
-                        continue
         return potential_move
 
     def kempe_chain(self):
         kc=LifoQueue()
         event_id1=random.randint(0,self.problem.E-1)
-        eneighbors=self.problem.G.neighbors(event_id1)
+        event_id2=None
+        eneighbors=list(self.problem.G.neighbors(event_id1))
         valid_move=False
         while len(eneighbors)==0 and not valid_move:
             event_id1=random.randint(0,self.problem.E-1)
             eneighbors=self.problem.G.neighbors(event_id1)
-            for event_id2 in eneighbors:
-                valid_move=(self.solution_set[event_id2]['P'] in self.problem.event_available_periods[event_id] and self.solution_set[event_id]['P'] in self.problem.event_available_periods[event_id2])
+            for event_id_neighbor in eneighbors:
+                valid_move=(self.solution_set[event_id_neighbor]['P'] in self.problem.event_available_periods[event_id] and self.solution_set[event_id]['P'] in self.problem.event_available_periods[event_id_neighbor])
                 if valid_move:
+                    event_id2=event_id_neighbor
                     break 
-
+        if event_id2==None: return dict()
         versus_periods={
             self.solution_set[event_id1]['P']:self.solution_set[event_id2]['P'],
             self.solution_set[event_id2]['P']:self.solution_set[event_id1]['P']
@@ -533,7 +546,7 @@ class Solution:
         potential_solution={}
         for event_id,period_id in moves.items():
             found=False
-            for room_id in range(self.problem.R):
+            for room_id in self.problem.event_available_rooms[event_id]:
                 if self.room_available(period_id,room_id,excluded=[event_id]):
                     potential_solution[event_id]=(period_id,room_id)
             if not found:
@@ -544,13 +557,14 @@ class Solution:
         pass
 
     def select_operator(self):
-        operator_choice=random.randint(1,3)
+        operator_choice=random.randint(1,2)
+        # operator_choice=1
         if operator_choice==1:
-            return self.transfer_event()
+            return self.transfer_event(),"TRANSFER"
         elif operator_choice==2:
-            return self.swap_events()
+            return self.swap_events(),"SWAP"
         elif operator_choice==3:
-            return self.kempe_chain()
+            return self.kempe_chain(),"KEMPE CHAIN"
         else:
             raise ValueError(f"Operator {operator_choice} does not implement yet")
 
@@ -571,6 +585,7 @@ class Solution:
         penalty=0
         last_timeslot_penalty=0
         console=Console(record=True)
+        console.rule('[bold red]Infeasibilities')
         for student_id in range(self.problem.S):
             students_penalty=0
             single_event_day=0
@@ -579,75 +594,59 @@ class Solution:
                 periods_in_day=[self.solution_set[event_id]['P'] for event_id in self.problem.students[student_id] if self.solution_set[event_id]['P']//self.problem.periods_per_day==day]
                 if len(periods_in_day)==1:
                     single_event_day+=1
-                
-                for period_id in range(day*self.problem.periods_per_day,day*self.problem.periods_per_day+self.problem.periods_per_day):
-                    if period_id in periods_in_day:
-                        consecutive+=1  
-                    else:
-                        if consecutive>2:
-                            students_penalty+=(consecutive-2)
-                        consecutive=0
+                elif len(periods_in_day)>2:
+                    for period_id in range(day*self.problem.periods_per_day,day*self.problem.periods_per_day+self.problem.periods_per_day):
+                        if period_id in periods_in_day:
+                            consecutive+=1  
+                        else:
+                            if consecutive>2:
+                                students_penalty+=(consecutive-2)
+                            consecutive=0
 
-                if consecutive>2:
-                    students_penalty+=(consecutive-2)
-                consecutive=0
+                    if consecutive>2:
+                        students_penalty+=(consecutive-2)
+                    consecutive=0
 
-            console.log(f'[bold red]Student_id:{student_id}\tSingle Event days {single_event_day}/{self.problem.days}')
-            console.log(f'[bold red]Student_id:{student_id}\tConsecutive Events Penalty:{students_penalty}')
+            console.print(f'[bold red]Student_id:{student_id}\tSingle Event days {single_event_day}/{self.problem.days}')
+            console.print(f'[bold red]Student_id:{student_id}\tConsecutive Events Penalty:{students_penalty}')
             penalty+=single_event_day+students_penalty
 
-        console.rule('[bold blue]Period Infeasibilities')
+        console.log('[bold blue]Period Infeasibilities')
         for event_id in range(self.problem.E):
             if self.solution_set[event_id]['P'] in self.problem.last_period_per_day:
                 last_timeslot_penalty+=len(self.problem.events[event_id]['S'])
 
-            for neighbor_id in self.problem.G.neighbors(event_id):
+            for neighbor_id in list(self.problem.G.neighbors(event_id)):
                 if self.solution_set[event_id]['P']==self.solution_set[neighbor_id]['P']:
-                    console.log(f'[bold red]Infeasibility tracked: E{event_id}->E{neighbor_id}')
+                    console.print(f'[bold red]Infeasibility tracked: E{event_id}->E{neighbor_id}')
                     infeasibilities+=1
         
         penalty+=last_timeslot_penalty
 
-        console.rule('[bold red]Room infeasibilities')
+        console.log('[bold red]Room infeasibilities')
         for period_id in range(self.problem.P):
             room_placement=Counter(self.periodwise_solutions[period_id])
-            for room_id,no_events in room_placement:
+            for room_id,no_events in room_placement.items():
                 if no_events>1:
                     console.log(f'Room {room_id}: Total placements:{no_events}')
         
-        console.log(f'Last timeslot penalty:{last_timeslot_penalty}')
-        console.log(f'Total penalty:{penalty}')
-        console.log(f'Total number of infeasibilities tracked:{infeasibilities}')
+        console.print(f'Last timeslot penalty:{last_timeslot_penalty}')
+        console.print(f'Total penalty:{penalty}')
+        console.print(f'Total number of infeasibilities tracked:{infeasibilities}')
         
     def set_solution(self,candicate_solution):
+        is_init=(len([event_id for event_id in range(self.problem.E) if self.solution_set[event_id]['P']==-1 and self.solution_set[event_id]['R']==-1])==self.problem.E)
         for event_id,(period_id,room_id) in candicate_solution.items():
-            self.unschedule(event_id)
-            self.schedule(event_id,room_id,period_id)
+            if not is_init:
+                self.cost+=self.unschedule(event_id)
+            self.cost+=self.schedule(event_id,room_id,period_id)
+            print(self.cost)
     
     def save(self,filepath):
         self.solution_set=dict(sorted(self.solution_set.items(),key=lambda e:e[0]))
         with open(filepath,'w') as writer:
             for _,sol_set in self.solution_set.items():
-                writer.write(f'{sol_set["P"]} {sol_set["R"]}')
-    
-    def compute_daily_cost(self,day):
-        day_events=[event_id for event_id,(period_id,_) in self.solution_set.items() if period_id//problem.periods_per_day==day]
-        students_in_events=list(set([student_id for event_id in day_events for student_id in self.problem.events[event_id]['S']]))
-
-        dcost=0
-        for student_id in students_in_events:
-            consecutive=0
-            periods_in_day=[self.solution_set[event_id]['P'] for event_id in self.students[student_id] if event_id in day_events]
-            for period_id in range(day*self.problem.periods_per_day,day*self.problem.periods_per_day+self.problem.periods_per_day):
-                if period_id in periods_in_day:
-                    consecutive+=1
-                else:
-                    if consecutive>2:
-                        dcost+=(consecutive-2)
-                    consecutive=0
-            dcost+=(len(periods_in_day)==0)
-        return dcost
-
+                writer.write(f'{sol_set["P"]} {sol_set["R"]}\n')
 
 if __name__=='__main__':
     problem=Problem()
