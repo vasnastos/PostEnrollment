@@ -311,11 +311,14 @@ class Solution:
                 return False
         
         for event_id2 in self.problem.events[event_id]['HPE']:
-            if period_id>self.solution_set[event_id2][0]:
+            if period_id>self.solution_set[event_id2]['P']:
                 return False
         return True
 
     def room_available(self,period_id,room_id,excluded=[]):
+        if room_id not in self.problem.event_available_rooms[event_id]:
+            return False
+
         for event_id in self.roomwise_solutions[room_id]:
             if event_id in excluded:
                 continue
@@ -381,8 +384,6 @@ class Solution:
     def unschedule(self,event_id):
         partial_cost=0
         event_students=self.problem.events[event_id]['S']
-
-        consecutive=0
         current_period=self.solution_set[event_id]['P']
         day=current_period//self.problem.periods_per_day
         events_in_day=Counter([self.solution_set[event_id2]['P'] for student_id in event_students for event_id2 in self.problem.students[student_id]])
@@ -439,10 +440,9 @@ class Solution:
 
         candicate_period=None
         for neighbor_id in event_neighbors:
-            if self.can_be_moved(event_id,self.solution_set[neighbor_id]['P'],excluded={neighbor_id}):
+            if self.can_be_moved(event_id,self.solution_set[neighbor_id]['P'],excluded=[neighbor_id]):
                 candicate_period=self.solution_set[neighbor_id]['P']
                 break
-        
         
         if candicate_period:
             for room_id in range(self.problem.R):
@@ -479,10 +479,10 @@ class Solution:
                 else:
                     # event_id1 room
                     for room_id in self.problem.event_available_rooms[event_id]:
-                        if room_id in [self.solution_set[event_id]['R'],self.solution_set[event_id2]]:
+                        if room_id in [self.solution_set[event_id]['R'],self.solution_set[event_id2]['R']]:
                             continue
-                        if self.room_available(self.solution_set[event_id2][0],room_id):
-                            potential_move[event_id]=(self.solution_set[event_id2][0],room_id)
+                        if self.room_available(self.solution_set[event_id2]['P'],room_id):
+                            potential_move[event_id]=(self.solution_set[event_id2]['P'],room_id)
                     
                     if event_id not in potential_move: 
                         potential_move.clear()
@@ -492,23 +492,26 @@ class Solution:
                         if room_id in [self.solution_set[event_id][1],self.solution_set[event_id2]]:
                             continue
                         if self.room_available(self.solution_set[event_id][0],room_id):
-                            potential_move[event_id]=(self.solution_set[event_id2][0],room_id)
+                            potential_move[event_id]=(self.solution_set[event_id2]['P'],room_id)
 
                     if event_id2 not in potential_move: 
                         potential_move.clear()
                         continue
-                
         return potential_move
 
     def kempe_chain(self):
         kc=LifoQueue()
         event_id1=random.randint(0,self.problem.E-1)
         eneighbors=self.problem.G.neighbors(event_id1)
-        while len(eneighbors)==0:
+        valid_move=False
+        while len(eneighbors)==0 and not valid_move:
             event_id1=random.randint(0,self.problem.E-1)
             eneighbors=self.problem.G.neighbors(event_id1)
-        event_id2=eneighbors[random.randint(0,len(eneighbors)-1)]
-        
+            for event_id2 in eneighbors:
+                valid_move=(self.solution_set[event_id2]['P'] in self.problem.event_available_periods[event_id] and self.solution_set[event_id]['P'] in self.problem.event_available_periods[event_id2])
+                if valid_move:
+                    break 
+
         versus_periods={
             self.solution_set[event_id1]['P']:self.solution_set[event_id2]['P'],
             self.solution_set[event_id2]['P']:self.solution_set[event_id1]['P']
@@ -521,7 +524,7 @@ class Solution:
             current_period=self.solution_set[current_event]['P']
             new_period=versus_periods[current_period]
             moves[current_event]=new_period
-            eneighbors=self.problem.G.neioghbors(current_event)
+            eneighbors=self.problem.G.neighbors(current_event)
             for neighbor in eneighbors:
                 if neighbor in moves: continue
                 if self.solution_set[neighbor]['P']==new_period:
@@ -537,6 +540,8 @@ class Solution:
                 return dict()
         return potential_solution
 
+    def kick(self):
+        pass
 
     def select_operator(self):
         operator_choice=random.randint(1,3)
@@ -550,19 +555,17 @@ class Solution:
             raise ValueError(f"Operator {operator_choice} does not implement yet")
 
     def reposition(self,moves):
-        self.memory.clear()
-        move_cost=0
         for event_id,(period_id,room_id) in moves.items():
             self.memory[event_id]=(period_id,room_id)
-            move_cost+=self.unschedule(event_id)
-            move_cost+=self.schedule(event_id,room_id,period_id)
-        return move_cost
+            self.cost+=self.unschedule(event_id)
+            self.cost+=self.schedule(event_id,room_id,period_id)
 
     def rollback(self):
         for event_id,(period_id,room_id) in self.memory.items():
-            self.unschedule(event_id)
-            self.schedule(event_id,room_id,period_id)
-    
+            self.cost+=self.unschedule(event_id)
+            self.cost+=self.schedule(event_id,room_id,period_id)
+        self.memory.clear()
+
     def validator(self):
         infeasibilities=0
         penalty=0
@@ -618,9 +621,32 @@ class Solution:
         
     def set_solution(self,candicate_solution):
         for event_id,(period_id,room_id) in candicate_solution.items():
-            self.solution_set[event_id]['P']=period_id
-            self.solution_set[event_id]['R']=room_id
+            self.unschedule(event_id)
+            self.schedule(event_id,room_id,period_id)
+    
+    def save(self,filepath):
+        self.solution_set=dict(sorted(self.solution_set.items(),key=lambda e:e[0]))
+        with open(filepath,'w') as writer:
+            for _,sol_set in self.solution_set.items():
+                writer.write(f'{sol_set["P"]} {sol_set["R"]}')
+    
+    def compute_daily_cost(self,day):
+        day_events=[event_id for event_id,(period_id,_) in self.solution_set.items() if period_id//problem.periods_per_day==day]
+        students_in_events=list(set([student_id for event_id in day_events for student_id in self.problem.events[event_id]['S']]))
 
+        dcost=0
+        for student_id in students_in_events:
+            consecutive=0
+            periods_in_day=[self.solution_set[event_id]['P'] for event_id in self.students[student_id] if event_id in day_events]
+            for period_id in range(day*self.problem.periods_per_day,day*self.problem.periods_per_day+self.problem.periods_per_day):
+                if period_id in periods_in_day:
+                    consecutive+=1
+                else:
+                    if consecutive>2:
+                        dcost+=(consecutive-2)
+                    consecutive=0
+            dcost+=(len(periods_in_day)==0)
+        return dcost
 
 
 if __name__=='__main__':

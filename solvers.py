@@ -5,6 +5,8 @@ import os,pickle
 from itertools import combinations,product
 import gurobipy as gp
 
+SOLVER=None
+
 def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
     """
         Initial solution creator. It constructs 3 different solutions using 3 different models(cp-sat,cplex-Cp and gurobi-mip)
@@ -16,7 +18,7 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
         Returns:
             - dict: contains the generated timetable
     """
-
+    SOLVER=f"Initial_Solution_Constructor-{csolver}"
     generated_solution={}
     if csolver=='cp-sat':
         model=cp_model.CpModel()
@@ -240,9 +242,10 @@ def create_timetable(problem:"Problem",csolver='cp-sat',save='txt',timesol=600):
         model.Params.Threads=os.cpu_count()
         model.optimize()
 
-        for (event_id,room_id,period_id),decision_var in xvars.items():
-            if decision_var.X==1:
-                generated_solution[event_id]=(period_id,room_id)
+        if model.Status in [gp.GRB.OPTIMAL,gp.GRB.FEASIBLE]:
+            for (event_id,room_id,period_id),decision_var in xvars.items():
+                if decision_var.X==1:
+                    generated_solution[event_id]=(period_id,room_id)
     
     # save options
     if save=='txt':
@@ -378,6 +381,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     generated_solution[event_id]=(period_id,room_id)
     
     elif day_by_day:
+        SOLVER=f"Day_by_day_optimizer-{tsolver}"
         if 'day' not in kwargs:
             raise ValueError("Day-by-Day solver called and no day provided")
         if 'solution_hint' not in kwargs:
@@ -676,6 +680,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     generated_solution[event_id]=(period_id,room_id)
     
     elif days_combined:
+        SOLVER=f'Days_combined_optimizer-{tsolver}'
         if 'days' not in kwargs:
             raise ValueError("You did not provide the right amount of arguments in the solver")
         days=kwargs['days']
@@ -691,10 +696,11 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
             periods=[period_id for day in days for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)]
             xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'dv_{event_id}_{room_id}_{period_id}') for event_id in eset for room_id in range(problem.R) for period_id in periods}
             partial_student_set=set([student_id for event_id in eset for student_id in problem.events[event_id]['S']])
-            shints=problem.create_hints(eset,solution_hint)
+            # shints=problem.create_hints(eset,solution_hint)
 
-            for event_id,(period_id,room_id) in solution_hint.items():
-                model.AddHint(xvars[(event_id,room_id,period_id)],1)
+            if solution_hint:
+                for event_id in eset:
+                    model.AddHint(xvars[(event_id,solution_hint[event_id]['R'],solution_hint[event_id]['P'])],1)
 
             for event_id in eset:
                 model.Add(
@@ -745,13 +751,6 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                                     for room_id in range(problem.R)
                                 ])<=1
                             )
-                    else:
-                        model.Add(
-                            sum([
-                                xvars[(event_id,room_id,solution_hint[event_id]['P'])]
-                                for room_id in range(problem.R)
-                            ])==0
-                        )
             
             if PRF.has_extra_constraints(problem.formulation):
                 for event_id in eset:
@@ -788,7 +787,7 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                             xvars[(event_id,room_id,period_id)]
                             for event_id in student_events_set
                             for room_id in range(problem.R)
-                            for period_id in range(problem.P)
+                            for period_id in periods
                         ])==1
                     ).OnlyEnforceIf(single_event_days[(student_id,day)])
 
@@ -803,10 +802,12 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                     
                     for i in range(3,10):
                         for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day-i+1):
+                            previous_period_cost=0
+                            next_period_cost=0
                             if period_id>day*problem.periods_per_day:
-                                previous_period_cost=sum([xvars[(event_id,room_id,period_id-1)] for event_id in student_events_set for room_id in range(problem.R)])+shints[student_id][period_id-1]
+                                previous_period_cost=sum([xvars[(event_id,room_id,period_id-1)] for event_id in student_events_set for room_id in range(problem.R)])
                             if period_id<day*problem.periods_per_day+problem.periods_per_day-i-1:
-                                next_period_cost=sum([xvars[(event_id,room_id,period_id+i)] for event_id in student_events_set for room_id in range(problem.R)])+shints[student_id][period_id]
+                                next_period_cost=sum([xvars[(event_id,room_id,period_id+i)] for event_id in student_events_set for room_id in range(problem.R)])
 
                             model.Add(
                                 previous_period_cost
@@ -815,11 +816,9 @@ def solve(problem:"Problem",tsolver='cpsat',solution_hint=None,day_by_day=False,
                                     for event_id in student_events_set
                                     for room_id in range(problem.R)
                                     for pid in range(period_id,period_id+i)
-                                ])-sum([
-                                    shints[student_id][pid]
-                                    for pid in range(period_id,period_id+i)
                                 ])
-                                +next_period_cost>=-(i-1)
+                                +next_period_cost
+                                +consecutive_events[(student_id,day,i)]>=-(i-1)
                             )
 
             objective=[
