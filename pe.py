@@ -35,7 +35,6 @@ class PRF(Enum):
     def get_formulation(filename):
         if type(Problem.formulationDB)!=pd.DataFrame:
             Problem.formulationDB=pd.read_excel(os.path.join(Problem.path_to_datasets,'descriptive_ds.xlsx'),header=0)
-            print(Problem.formulationDB)
         
         check_vals=Problem.formulationDB['instance'].str.contains(filename)
         true_indeces=check_vals.index[check_vals==True].to_list()
@@ -557,7 +556,7 @@ class Solution:
         pass
 
     def select_operator(self):
-        operator_choice=random.randint(1,2)
+        operator_choice=random.randint(1,3)
         # operator_choice=1
         if operator_choice==1:
             return self.transfer_event(),"TRANSFER"
@@ -640,7 +639,6 @@ class Solution:
             if not is_init:
                 self.cost+=self.unschedule(event_id)
             self.cost+=self.schedule(event_id,room_id,period_id)
-            print(self.cost)
     
     def save(self,filepath):
         self.solution_set=dict(sorted(self.solution_set.items(),key=lambda e:e[0]))

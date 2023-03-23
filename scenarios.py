@@ -92,11 +92,11 @@ def scenario4():
     # ]
 
     instances=[
-        # "easy01.tim",
-        # "easy02.tim",
+        "easy01.tim",
+        "easy02.tim",
         "easy03.tim",
-        # "easy04.tim",
-        # "easy05.tim"
+        "easy04.tim",
+        "easy05.tim"
     ]
 
     for instance in instances:
