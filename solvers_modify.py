@@ -1,7 +1,11 @@
+
+
+
+
 from pe import Problem,PRF
 from ortools.sat.python import cp_model
-import gurobipy as gp
 import os
+import gurobipy as gp
 
 
 def timeslot_block_reassignment(problem:Problem,events_in_timeblock:list,frozen_periods:list,solution_hint=None,timesol=60):
@@ -316,8 +320,9 @@ def optimize_rooms(problem:Problem,room_:int,solution_hint:dict,csolver='cp-sat'
                     generated_solution[event_id]=(period_id,room_id)
 
     elif csolver=='gurobi':
-        model=gp.Model(name='Room Optimizer')
-        xvars=gp.addVars([(event_id,room_id,period_id) for event_id in eset for room_id in range(problem.R) for period_id in range(problem.P)],vtype=gp.GRB.BINARY)
+        model=gp.Model(name='Room optimizer')
+
+        xvars=model.addVars([(event_id,room_id,period_id) for event_id in eset for room_id in range(problem.R) for period_id in range(problem.P)])
 
         for event_id in eset:
             model.addConstr(
@@ -330,6 +335,7 @@ def optimize_rooms(problem:Problem,room_:int,solution_hint:dict,csolver='cp-sat'
                     model.addConstr(
                         xvars.sum(event_id,room_id,'*')==0
                     )
+            
             for period_id in range(problem.P):
                 if period_id not in problem.event_available_periods[event_id]:
                     model.addConstr(
@@ -344,36 +350,112 @@ def optimize_rooms(problem:Problem,room_:int,solution_hint:dict,csolver='cp-sat'
         
         for event_id in eset:
             for neighbor_id in problem.G.neighbors(event_id):
-                for period_id in range(problem.P):
-                    if neighbor_id in eset:
+                if neighbor_id in eset:
+                    for period_id in range(problem.P):
                         model.addConstr(
                             xvars.sum(event_id,'*',period_id)
                             +xvars.sum(neighbor_id,'*',period_id)
-                            <=1
+                            <=1            
                         )
-                    else:
-                        model.addConstr(
-                            xvars.sum(event_id,'*',solution_hint[neighbor_id]['P'])==0
-                        )
+                else:
+                    model.addConstr(
+                        xvars.sum(event_id,'*',solution_hint[event_id]['P'])==0
+                    )
         
         if PRF.has_extra_constraints(problem.formulation):
             for event_id in eset:
-                for event_id2 in list(problem.G.neighbors(event_id)):
-                    model.addConstr(
-                        sum([
-                            xvars[(event_id,room_id,period_id)] * period_id
-                            for room_id in range(problem.R)
-                            for period_id in range(problem.P)
-                        ])<sum([
-                            xvars[(event_id2,room_id,period_id)] * period_id
-                            for room_id in range(problem.R)
-                            for period_id in range(problem.P)
-                        ])
-                    )
+                for event_id2 in problem.events[event_id]['HPE']:
+                    if event_id2 in eset:
+                        model.addConstr(
+                            sum([
+                                xvars[(event_id,room_id,period_id)] * period_id
+                                for room_id in range(problem.R)
+                                for period_id in range(problem.P)
+                            ])<sum([
+                                xvars[(event_id2,room_id,period_id)] * period_id
+                                for room_id in range(problem.R)
+                                for period_id in range(problem.P)
+                            ])
+                        )
         
         single_event_days=model.addVars([(student_id,day) for student_id in partial_student_set for day in range(problem.days)])
         consecutive_events=model.addVars([(student_id,day,i) for student_id in partial_student_set for day in range(problem.days) for i in range(3,10)])
+        shints=problem.create_hints(eset,solution_hint)
 
         for student_id in partial_student_set:
+            student_event_set=[event_id for event_id in problem.students[event_id]['S'] if event_id in eset]
             for day in range(problem.days):
-                
+                model.addConstr(
+                    (
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in student_event_set
+                            for room_id in range(problem.R)
+                            for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day)
+                        ])+sum([
+                            shints[student_id][period_id]
+                        ])==1
+                    )>>single_event_days[(student_id,day)]==1
+                )
+
+                model.addConstr(
+                    (
+                        sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in student_event_set
+                            for room_id in range(problem.R)
+                            for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day)
+                        ])+sum([
+                            shints[student_id][period_id]
+                        ])!=1
+                    )>>single_event_days[(student_id,day)]==0
+                )
+            
+            for i in range(3,10):
+                for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day-i+1):
+                    previous_period_cost=0
+                    next_period_cost=0
+                    if period_id>day*problem.periods_per_day:
+                        previous_period_cost=shints[student_id][period_id]+sum([xvars[(event_id,room_id,period_id)] for event_id in eset for room_id in range(problem.R) for period_id in range(problem.P)])
+                    if period_id<day*problem.periods_per_day+problem.periods_per_day-i:
+                        next_period_cost=shints[student_id][period_id]+sum([xvars[(event_id,room_id,period_id)] for event_id in eset for room_id in range(problem.R) for period_id in range(day*problem.periods_per_day+day*problem.periods_per_day+problem.periods_per_day)])
+
+                    model.addConstr(
+                        previous_period_cost
+                        -sum([
+                            xvars[(event_id,room_id,period_id)]
+                            for event_id in eset
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])
+                        -sum([
+                            shints[student_id][period_id]
+                            for period_id in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day)
+                        ])
+                        +next_period_cost
+                        +consecutive_events[(student_id,day,i)]<=-(i-1)
+                    )
+
+            objective=[
+                single_event_days.sum('*','*'),
+                sum([consecutive_events[(student_id,day,i)] * (i-1) for student_id in partial_student_set for room_id in range(problem.R) for period_id in range(problem.P)]),
+                sum([xvars[(event_id,room_id,period_id)] * len(problem.events[event_id]['S']) for event_id in eset for room_id in range(problem.R) for period_id in range(problem.P)])
+            ]
+
+            model.setObjective(sum(objective))
+            model.Params.TimeLimit=timesol
+            model.Params.Threads=os.cpu_count()
+            model.optimize()
+
+
+
+
+
+
+
+            if model.Status in [gp.GRB.OPTIMAL,not gp.GRB.INFEASIBLE]:
+                for (event_id,room_id,period_id),decision_var in xvars.items():
+                    if decision_var.X==1:
+                        generated_solution[event_id]=(period_id,room_id)
+        
+        return generated_solution
