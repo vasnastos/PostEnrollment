@@ -1,5 +1,6 @@
 from pe import Problem,PRF
 from ortools.sat.python import cp_model
+import gurobipy as gp
 import os
 
 
@@ -313,5 +314,66 @@ def optimize_rooms(problem:Problem,room_:int,solution_hint:dict,csolver='cp-sat'
             for (event_id,room_id,period_id),dvar in xvars.items():
                 if solver.Value(dvar)==1:
                     generated_solution[event_id]=(period_id,room_id)
+
     elif csolver=='gurobi':
-        pass
+        model=gp.Model(name='Room Optimizer')
+        xvars=gp.addVars([(event_id,room_id,period_id) for event_id in eset for room_id in range(problem.R) for period_id in range(problem.P)],vtype=gp.GRB.BINARY)
+
+        for event_id in eset:
+            model.addConstr(
+                xvars.sum(event_id,'*','*')==1
+            )
+        
+        for event_id in eset:
+            for room_id in range(problem.R):
+                if room_id not in problem.event_available_rooms[event_id]:
+                    model.addConstr(
+                        xvars.sum(event_id,room_id,'*')==0
+                    )
+            for period_id in range(problem.P):
+                if period_id not in problem.event_available_periods[event_id]:
+                    model.addConstr(
+                        xvars.sum(event_id,'*',period_id)==0
+                    )
+        
+        for room_id in range(problem.R):
+            for period_id in range(problem.P):
+                model.addConstr(
+                    xvars.sum('*',room_id,period_id)<=1
+                )
+        
+        for event_id in eset:
+            for neighbor_id in problem.G.neighbors(event_id):
+                for period_id in range(problem.P):
+                    if neighbor_id in eset:
+                        model.addConstr(
+                            xvars.sum(event_id,'*',period_id)
+                            +xvars.sum(neighbor_id,'*',period_id)
+                            <=1
+                        )
+                    else:
+                        model.addConstr(
+                            xvars.sum(event_id,'*',solution_hint[neighbor_id]['P'])==0
+                        )
+        
+        if PRF.has_extra_constraints(problem.formulation):
+            for event_id in eset:
+                for event_id2 in list(problem.G.neighbors(event_id)):
+                    model.addConstr(
+                        sum([
+                            xvars[(event_id,room_id,period_id)] * period_id
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])<sum([
+                            xvars[(event_id2,room_id,period_id)] * period_id
+                            for room_id in range(problem.R)
+                            for period_id in range(problem.P)
+                        ])
+                    )
+        
+        single_event_days=model.addVars([(student_id,day) for student_id in partial_student_set for day in range(problem.days)])
+        consecutive_events=model.addVars([(student_id,day,i) for student_id in partial_student_set for day in range(problem.days) for i in range(3,10)])
+
+        for student_id in partial_student_set:
+            for day in range(problem.days):
+                
