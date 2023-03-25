@@ -447,12 +447,6 @@ def optimize_rooms(problem:Problem,room_:int,solution_hint:dict,csolver='cp-sat'
             model.Params.Threads=os.cpu_count()
             model.optimize()
 
-
-
-
-
-
-
             if model.Status in [gp.GRB.OPTIMAL,not gp.GRB.INFEASIBLE]:
                 for (event_id,room_id,period_id),decision_var in xvars.items():
                     if decision_var.X==1:

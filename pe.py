@@ -176,14 +176,6 @@ class Problem:
                 self.event_combinations[frozenset(combination)]=self.event_combinations.get(frozenset(combination),0)+1
 
         self.total_clash=self.G.number_of_edges()
-    
-    def create_hints(self,eset,solution_hint):
-        student_set={student_id for event_id in eset for student_id in self.events[event_id]['S']}
-        hints={student_id:{period_id:False for period_id in range(problem.P)} for student_id in student_set}
-        for event_id in eset:
-            for student_id in problem.events[event_id]['S']:
-                hints[student_id][solution_hint[event_id]['P']]=True
-        return hints
 
     def statistics(self):
         self.conflict_density=nx.density(self.G)
@@ -227,6 +219,23 @@ class Problem:
         ax.spines['right'].set_visible(False)
         plt.show()
     
+    def create_hints(self,eset,solution_hint):
+        student_set={student_id for event_id in eset for student_id in self.events[event_id]['S']}
+        hints={student_id:{period_id:False for period_id in range(problem.P)} for student_id in student_set}
+        for event_id in eset:
+            for student_id in problem.events[event_id]['S']:
+                hints[student_id][solution_hint[event_id]['P']]=True
+        return hints
+
+    def frozenrooms(self)->dict:
+        distinct_rooms=dict()
+        for event_id,room_events in self.event_available_rooms.items():
+            froom_set=frozenset(room_events)
+            if froom_set not in distinct_rooms:
+                distinct_rooms[froom_set]=list()
+            distinct_rooms[froom_set].append(event_id)    
+        return distinct_rooms
+
     def plot_graph(self):
         screen = screeninfo.get_monitors()[1]
         output_notebook()
@@ -505,8 +514,7 @@ class Solution:
                         potential_move[event_id]=(self.solution_set[event_id2]['P'],room_id)
 
                 if event_id2 not in potential_move: 
-                    return dict()
-                    
+                    return dict()        
         return potential_move
 
     def kempe_chain(self):
@@ -553,10 +561,31 @@ class Solution:
         return potential_solution
 
     def kick(self):
-        pass
+        event_id1=random.randint(0,self.problem.E-1)
+        event_id2=random.randint(0,self.problem.E-1)
+        while event_id1==event_id2:
+            event_id2=random.randint(0,self.problem.E-1)
+        
+        potential_solution=dict()
+        if self.can_be_moved(event_id1,self.solution_set[event_id2]['P'],excluded=[event_id2]):
+            for room_id in range(problem.R):
+                if self.room_available(self.solution_set[event_id2]['P'],room_id):
+                    potential_solution[event_id1]=(self.solution_set[event_id1]['P'])
+        
+        if event_id1 in potential_solution:
+            previous_day=self.solution_set[event_id2]['P']//self.problem.periods_per_day
+            new_event2_period=random.choice([pid for pid in range(self.problem.P) if pid//self.problem.periods_per_day!=previous_day])
+            if self.can_be_moved(event_id2,new_event2_period,excluded=[event_id1]):
+                for room_id in range(problem.R):
+                    if self.room_available(event_id2,new_event2_period):
+                        potential_solution[event_id2]=(new_event2_period,room_id)
+                        break
+                return potential_solution
+        
+        return dict()
 
     def select_operator(self):
-        operator_choice=random.randint(1,3)
+        operator_choice=random.randint(1,4)
         # operator_choice=1
         if operator_choice==1:
             return self.transfer_event(),"TRANSFER"
@@ -564,6 +593,8 @@ class Solution:
             return self.swap_events(),"SWAP"
         elif operator_choice==3:
             return self.kempe_chain(),"KEMPE CHAIN"
+        elif operator_choice==4:
+            return self.kick(),"KICK"
         else:
             raise ValueError(f"Operator {operator_choice} does not implement yet")
 
@@ -576,7 +607,7 @@ class Solution:
     def rollback(self):
         for event_id,(period_id,room_id) in self.memory.items():
             self.cost+=self.unschedule(event_id)
-            self.cost+=self.schedule(event_id,room_id,period_id)
+            self.cost+=self.schedule(event_id=event_id,room_id=room_id,period_id=period_id)
         self.memory.clear()
 
     def validator(self):
@@ -646,8 +677,17 @@ class Solution:
             for _,sol_set in self.solution_set.items():
                 writer.write(f'{sol_set["P"]} {sol_set["R"]}\n')
 
-if __name__=='__main__':
-    problem=Problem()
-    problem.read('i20.tim')
-    problem.statistics()
-    problem.plot_graph()
+
+class Configuration:
+    def __init__(self):
+        self.solver='cp-sat'
+        self.initial_solution_time_duration=600
+        self.days_combined_duration=400
+        self.day_by_day_duration=60
+        self.simulated_annealing_duration=1500
+    
+    def parse(self):
+        pass
+
+
+

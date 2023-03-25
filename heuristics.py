@@ -119,30 +119,30 @@ class SimulatedAnnealing:
                 iter_id+=1
 
             temperature*=alpha
-            # if temperature<freeze:
-            #     temperature=start_temperature * random.uniform(0,2)
-            #     self.console.rule(f'[bold red]Temperature reheating:{temperature}')
-            #     selection_criterion=random.uniform(0,1)
+            if temperature<freeze:
+                temperature=start_temperature * random.uniform(0,2)
+                self.console.rule(f'[bold red]Temperature reheating:{temperature}')
+                selection_criterion=random.uniform(0,1)
 
-            #     if selection_criterion<0.3:
-            #         daily_costs=list(sorted({day:self.solution.compute_daily_cost(day) for day in range(self.solution.problem.days)}.items(),key=lambda x:x[1]))
-            #         partial_solution=solve(problem=self.solution.problem,day_by_day=True,solution_hint=self.solution.solution_set,timesol=50,day=daily_costs[0][0])
-            #         if partial_solution!={}:
-            #             self.solution.set_solution(partial_solution)
-            #             best_solution=self.solution.solution_set
-            #             best_cost=self.solution.cost
-            #             self.console.print(f'[bold green]Best solution found| Solver:{instance.get_solution_info()}\tCost:{self.solution.cost}')
+                if selection_criterion<0.3:
+                    daily_costs=list(sorted({day:self.solution.compute_daily_cost(day) for day in range(self.solution.problem.days)}.items(),key=lambda x:x[1]))
+                    partial_solution=solve(problem=self.solution.problem,day_by_day=True,solution_hint=self.solution.solution_set,timesol=50,day=daily_costs[0][0])
+                    if partial_solution!={}:
+                        self.solution.set_solution(partial_solution)
+                        best_solution=self.solution.solution_set
+                        best_cost=self.solution.cost
+                        self.console.print(f'[bold green]Best solution found| Solver:{instance.get_solution_info()}\tCost:{self.solution.cost}')
 
-            #     else:
-            #         daily_costs=list(sorted({day:self.solution.compute_daily_cost(day) for day in range(self.solution.problem.days)}.items(),key=lambda x:x[1]))
-            #         days_combined_selection_number=random.randint(2,3)
-            #         days=[daily_costs[i][0] for i in range(days_combined_selection_number)]
-            #         partial_solution=solve(problem=self.solution.problem,days_combined=True,timesol=200,solution_hint=self.solution.solution_set,days=days)
-            #         if partial_solution!={}:
-            #             self.solution.set_solution(partial_solution)
-            #             self.console.print(f'[bold green]New Solution generated\tSolver:{instance.get_solution_info()}\tDays feeded in solver:{days}\tCost:{self.solution.cost}')
-            #             best_solution=self.solution.solution_set
-            #             best_cost=self.solution.cost
+                else:
+                    daily_costs=list(sorted({day:self.solution.compute_daily_cost(day) for day in range(self.solution.problem.days)}.items(),key=lambda x:x[1]))
+                    days_combined_selection_number=random.randint(2,3)
+                    days=[daily_costs[i][0] for i in range(days_combined_selection_number)]
+                    partial_solution=solve(problem=self.solution.problem,days_combined=True,timesol=200,solution_hint=self.solution.solution_set,days=days)
+                    if partial_solution!={}:
+                        self.solution.set_solution(partial_solution)
+                        self.console.print(f'[bold green]New Solution generated\tSolver:{instance.get_solution_info()}\tDays feeded in solver:{days}\tCost:{self.solution.cost}')
+                        best_solution=self.solution.solution_set
+                        best_cost=self.solution.cost
 
             if time.time()-start_timer>timesol:
                 self.console.print('Procedure ended!!! Exit Simulated Annealing')

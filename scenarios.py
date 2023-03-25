@@ -1,11 +1,14 @@
 from solvers import create_timetable,solve
 from pe import Problem,PRF,Solution
 from time import time
-import pickle
+import pickle,random
 from heuristics import TabuSearch,SimulatedAnnealing
 
 
 def scenario1():
+    """
+    Construct initial solutions
+    """
     instances=Problem.get_instances()
     counters={}
 
@@ -32,6 +35,36 @@ def scenario2():
         _=ts.TS()
 
 def scenario3():
+    """
+    Run day by day scenario using the appropriate arguments example
+    """
+    instance_name=f'easy03.tim'
+    solution=Solution(instance_name)
+    
+    init_solution=create_timetable(problem=solution.problem,csolver='cp-sat')
+    if init_solution!={}:
+        solution.set_solution(init_solution)
+    day=random.randint(0,solution.problem.days-1)
+    
+
+    print(solve(problem=solution.problem,tsolver='cp-sat',day_by_day=True,init_solution=init_solution,solution_hint=init_solution,day=day))
+
+def scenario4():
+    """
+    Test days combined Solver
+    """
+    instance_name="easy03.tim"
+    solution=Solution(instance_name)
+    days=[0,1,4]
+    init_solution=create_timetable(problem=solution.problem,csolver='gurobi')
+    if init_solution!={}:
+        solution.set_solution(init_solution)
+
+    retrieved_solution=solve(problem=solution.problem,days_combined=True,days=days,solution_hint=solution.solution_set)
+    solution.set_solution(retrieved_solution)
+    solution.validator()
+
+def scenario5():
     instances=[
         "small_1.tim",
         "small_2.tim",
@@ -67,7 +100,10 @@ def scenario3():
         solution.validator()
         print(f'Operation time:{time()-start_timer}\'s')
 
-def scenario4():
+def scenario6():
+    """
+    Test simulated Annealing procedure
+    """
     # instances=[
     #     'big_1.tim',
     #     'big_2.tim',
@@ -107,8 +143,20 @@ def scenario4():
         sa.solution.validator()
         print(f'Operation time:{time()-start_timer}\'s')
 
+def scenario7():
+    """
+        Find Frozenrooms for each dataset
+    """
+    instance='big_2.tim'
+    problem=Problem()
+    problem.read(instance)
+    print(problem.frozenrooms())
+
 if __name__=='__main__':
     # scenario1()
     # scenario2()
     # scenario3()
-    scenario4() # Simulated Annealing procedure for big datasets
+    # scenario4() 
+    # scenario5()
+    # scenario6()
+    scenario7()
