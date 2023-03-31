@@ -419,3 +419,35 @@ class TabuSearch:
                     self.kempe_chain(event_id)
                 elif roperator==4:
                     self.kick(event_id)
+
+
+class HCLA:
+    def __init__(self,ds_name) -> None:
+        self.solution=Solution(ds_name)
+        self.console=Console(record=True)
+
+    def preprocessing(self):
+        init_sol=create_timetable(problem=self.solution.problem,csolver='cp-sat',timesol=600)
+        if init_sol!={}:
+            self.solution.set_solution(init_sol)
+            self.console.print(f'[bold green] Initial solution cost using gurobi solver:{self.solution.cost}')
+
+        for day in range(self.solution.problem.days):
+            partial_sol=solve(problem=self.solution.problem,tsolver='cp-sat',day_by_day=True,timesol=60,day=day)
+            if partial_sol!={}:
+                previous_day_cost=self.solution.compute_daily_cost(day)
+                self.solution.set_solution(partial_sol)
+                self.console.print(f'[bold]HCLA| Day by day Improvement| Solution Cost:{previous_day_cost}->{self.solution.compute_daily_cost(day)}')
+        
+        self.console.print(f'[bold green]New solution Cost:{self.solution.cost}')
+
+
+    def solve(self):
+        self.preprocessing()
+        
+        best_solution=self.solution.solution_set
+        best_cost=self.solution.cost
+        iter_id=0
+        temperature=1000
+
+        

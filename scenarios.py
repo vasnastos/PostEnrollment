@@ -3,11 +3,31 @@ from pe import Problem,PRF,Solution
 from time import time
 import pickle,random
 from heuristics import TabuSearch,SimulatedAnnealing
+import argparse
+
+class Configuration:
+    def __init__(self):
+        self.solvers=['gurobi','cpsat','cpsat']
+        self.timestamps=[800,1900,60,200]
+    
+    def parse(self):
+        self.parser=argparse.ArgumentParser(prog='Post Enrollment Timetabling available arguments')
+        self.parser.add_argument('--isolver','--in',default=600)
+        self.parser.add_argument('--dbdsolver','--dbd',default=60)
+        self.parser.add_argument('--dcsolver','--dc',default=200)
+        self.parser.add_argument('--itype','--it',default='cp-sat')
+        self.parser.add_argument('--dbdtype','--dbdt',default='cp-sat',choices=['cp-sat','cplex','gurobi'])
+        self.parser.add_argument('--dctype','--dct',default='cp-sat',choices=['cp-sat','cplex','gurobi'])
+        self.parser.add_argument('--sasolver','--sa',default=1900)
+    
+    def set_vars(self):
+        pass
+
 
 
 def scenario1():
     """
-    Construct initial solutions
+        Construct initial solutions
     """
     instances=Problem.get_instances()
     counters={}
@@ -27,7 +47,7 @@ def scenario1():
 
 def scenario2():
     """
-    Try the tabu search formulation scenario
+        Try the tabu search formulation scenario
     """
     instances=Problem.get_instances(formulations=[PRF.MetaheuristicsNetwork,PRF.HarderLewisPaechter])
     for instance in instances:
@@ -36,7 +56,7 @@ def scenario2():
 
 def scenario3():
     """
-    Run day by day scenario using the appropriate arguments example
+        Run day by day scenario using the appropriate arguments example
     """
     instance_name=f'easy03.tim'
     solution=Solution(instance_name)
@@ -51,7 +71,7 @@ def scenario3():
 
 def scenario4():
     """
-    Test days combined Solver
+        Test days combined Solver
     """
     instance_name="easy03.tim"
     solution=Solution(instance_name)

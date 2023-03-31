@@ -20,7 +20,6 @@ from collections import defaultdict,Counter
 import random,time
 from queue import LifoQueue
 
-
 class PRF(Enum):
     TTCOMP2002=1,
     ITC2007=2,
@@ -568,7 +567,7 @@ class Solution:
         
         potential_solution=dict()
         if self.can_be_moved(event_id1,self.solution_set[event_id2]['P'],excluded=[event_id2]):
-            for room_id in range(problem.R):
+            for room_id in range(self.problem.R):
                 if self.room_available(self.solution_set[event_id2]['P'],room_id):
                     potential_solution[event_id1]=(self.solution_set[event_id1]['P'])
         
@@ -576,7 +575,7 @@ class Solution:
             previous_day=self.solution_set[event_id2]['P']//self.problem.periods_per_day
             new_event2_period=random.choice([pid for pid in range(self.problem.P) if pid//self.problem.periods_per_day!=previous_day])
             if self.can_be_moved(event_id2,new_event2_period,excluded=[event_id1]):
-                for room_id in range(problem.R):
+                for room_id in range(self.problem.R):
                     if self.room_available(event_id2,new_event2_period):
                         potential_solution[event_id2]=(new_event2_period,room_id)
                         break
@@ -678,16 +677,8 @@ class Solution:
                 writer.write(f'{sol_set["P"]} {sol_set["R"]}\n')
 
 
-class Configuration:
-    def __init__(self):
-        self.solver='cp-sat'
-        self.initial_solution_time_duration=600
-        self.days_combined_duration=400
-        self.day_by_day_duration=60
-        self.simulated_annealing_duration=1500
+
     
-    def parse(self):
-        pass
 
 
 
