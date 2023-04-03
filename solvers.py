@@ -900,6 +900,7 @@ def solution_cropper(problem:Problem,days_subset,solution_hint:dict,timesol=600)
                     sum([
                         xvars[(event_id,room_id,period_id)]
                         for room_id in range(problem.R)
-                    ])
+                    ])==0
                 )
+
 
