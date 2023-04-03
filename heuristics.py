@@ -442,12 +442,56 @@ class HCLA:
         self.console.print(f'[bold green]New solution Cost:{self.solution.cost}')
 
 
-    def solve(self):
+    def solve(self,timesol):
         self.preprocessing()
         
-        best_solution=self.solution.solution_set
-        best_cost=self.solution.cost
+        Bs=self.solution.solution_set
+        Bc=self.solution.cost
         iter_id=0
         temperature=1000
+        start_timer=time.time()
 
+        while True:
+            candicate_sol=self.solution.select_operator()
+            previous_cost=self.solution.cost
+            self.solution.reposition(candicate_sol)
+            delta=self.solution.cost-previous_cost
+            if self.solution.cost<previous_cost:
+                if self.solution.cost<Bc:
+                    Bs=self.solution.solution_set
+                    Bc=self.solution.cost
+                    self.console.print(f"HCLA |New solution found| S:{self.solution.cost}\tT:{temperature}")
+            elif self.solution.cost>previous_cost:
+                iter_id+=1
+                if random.random()<math.exp(-delta*temperature):
+                    # Solution accepted 
+                    pass
+                else:
+                    self.solution.rollback()
+            else:
+                iter_id+=1
+            
+            if iter_id%1000000==0:
+                number_of_days=random.randint(2,3)
+                daily_costs={day:self.solution.compute_daily_cost(day) for day  in range(self.solution.problem.days)}
+                sorted_daily_costs=list(sorted(daily_costs.items(),key=lambda x:x[1],reverse=True))
+
+                days_checked=[sorted_daily_costs[i][0] for i in range(number_of_days)]
+                timer=random.randint(200,500)
+                partial_sol=solve(problem=self.solution.problem,days_combined=True,timesol=timer,days=days_checked)
+                if partial_sol!={}:
+                    self.solution.set_solution(partial_sol)
+                    self.console.print(f'[bold green]HCLA| New solution found using DAYS_COMBINED_SOLVER| S:{self.solution.cost}')
+                    Bs=self.solution.solution_set
+                    Bc=self.solution.cost
         
+            if time.time()-start_timer>timesol:
+                break
+        
+        self.console.print(f'[bold green]HCLA| Procedurte ended| Best cost found:{Bc}')
+        return Bs
+                    
+
+            
+
+

@@ -862,3 +862,44 @@ def solve(problem:"Problem",tsolver='cp-sat',day_by_day=False,days_combined=Fals
                         generated_solution[event_id]=(period_id,room_id)
 
     return generated_solution
+
+
+def solution_cropper(problem:Problem,days_subset,solution_hint:dict,timesol=600):
+    model=cp_model.CpModel()
+    periods=[]
+    for day in days_subset:
+        count=1
+        for period in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day):
+            if count%3!=0:
+                periods.append(period)
+    eset=[event_id for event_id,(period_id,_) in solution_hint.items() if period_id in periods]
+    xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in eset for room_id in range(problem.R) for period_id in periods}
+
+    for event_id in eset:
+        model.Add(
+            sum([
+                xvars[(event_id,room_id,period_id)]
+                for room_id in range(problem.R)
+                for period_id in range(problem.P)
+            ])==1
+        )
+    
+    for event_id in eset:
+        for room_id in range(problem.R):
+            if room_id not in problem.event_available_rooms[event_id]:
+                model.Add(
+                    sum([
+                        xvars[(event_id,room_id,period_id)]
+                        for period_id in periods
+                    ])==0
+                )
+        
+        for period_id in periods:
+            if period_id not in problem.event_available_periods[event_id]:
+                model.Add(
+                    sum([
+                        xvars[(event_id,room_id,period_id)]
+                        for room_id in range(problem.R)
+                    ])
+                )
+
