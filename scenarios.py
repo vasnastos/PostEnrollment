@@ -160,7 +160,6 @@ def scenario6():
         sa=SimulatedAnnealing(instance)
         sa.solution.problem.statistics()
         sa.solve()
-        sa.solution.validator()
         print(f'Operation time:{time()-start_timer}\'s')
 
 def scenario7():
@@ -178,5 +177,5 @@ if __name__=='__main__':
     # scenario3()
     # scenario4() 
     # scenario5()
-    # scenario6()
-    scenario7()
+    scenario6()
+    # scenario7()

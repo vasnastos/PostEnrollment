@@ -72,6 +72,7 @@ class SimulatedAnnealing:
             if init_sol!={}:
                 self.solution.set_solution(init_sol)
 
+        self.solution.validator()
         with open(os.path.join('','results','initial_solutions',f'{self.solution.problem.id}_{instance.get_solver_type()}_{self.solution.compute_cost()}.txt'),'w') as writer:
             for _,sol_params in self.solution.solution_set.items():
                 writer.write(f'{sol_params["P"]} {sol_params["R"]}\n')
@@ -97,18 +98,18 @@ class SimulatedAnnealing:
                 if time.time()-start_timer>timesol:
                     break
                 continue
-                
+            previous_cost=self.solution.compute_cost()
             self.solution.reposition(moves)
+            current_cost=self.solution.compute_cost()
 
-            previous_cost=self.solution.cost
-            if self.solution.cost<best_cost:
-                best_solution=self.solution.solution_set
-                best_cost=self.solution.cost
-                self.console.print(f'[bold green]New solution found Cost:{best_cost}\tT:{temperature}\tMove:{move_name}')
-                move_history.append(move_name)
+            if current_cost<previous_cost:
+                if current_cost<best_cost:
+                    best_solution=self.solution.solution_set
+                    best_cost=current_cost
+                    self.console.print(f'[bold green]New solution found Cost:{best_cost}\tT:{temperature}\tMove:{move_name}')
                 iter_id+=1
-            elif self.solution.cost>best_cost:
-                delta=self.solution.cost-previous_cost
+            elif current_cost>previous_cost:
+                delta=current_cost-previous_cost
                 if random.uniform(0,1)<math.exp(-delta/temperature):
                     # Solution will be accepted|Metropolis criterion
                     pass
@@ -129,10 +130,10 @@ class SimulatedAnnealing:
                     partial_solution=solve(problem=self.solution.problem,day_by_day=True,solution_hint=self.solution.solution_set,timesol=50,day=daily_costs[0][0])
                     if partial_solution!={}:
                         self.solution.set_solution(partial_solution)
+                        new_cost=self.solution.compute_cost()
                         best_solution=self.solution.solution_set
-                        best_cost=self.solution.cost
-                        self.console.print(f'[bold green]Best solution found| Solver:{instance.get_solution_info()}\tCost:{self.solution.cost}')
-
+                        best_cost=new_cost
+                        self.console.print(f'[bold green]Best solution found| Solver:{instance.get_solution_info()}\tCost:{new_cost}')
                 else:
                     daily_costs=list(sorted({day:self.solution.compute_daily_cost(day) for day in range(self.solution.problem.days)}.items(),key=lambda x:x[1]))
                     days_combined_selection_number=random.randint(2,3)
@@ -140,16 +141,15 @@ class SimulatedAnnealing:
                     partial_solution=solve(problem=self.solution.problem,days_combined=True,timesol=200,solution_hint=self.solution.solution_set,days=days)
                     if partial_solution!={}:
                         self.solution.set_solution(partial_solution)
-                        self.console.print(f'[bold green]New Solution generated\tSolver:{instance.get_solution_info()}\tDays feeded in solver:{days}\tCost:{self.solution.cost}')
+                        new_cost=self.solution.compute_cost()
+                        self.console.print(f'[bold green]New Solution generated\tSolver:{instance.get_solution_info()}\tDays feeded in solver:{days}\tCost:{new_cost}')
                         best_solution=self.solution.solution_set
-                        best_cost=self.solution.cost
+                        best_cost=new_cost
 
             if time.time()-start_timer>timesol:
                 self.console.print('Procedure ended!!! Exit Simulated Annealing')
                 break
         self.solution.save(filepath=os.path.join('','results','simulated_annealing',f'{self.solution.problem.id}_{instance.get_solver_type()}_{self.solution.cost}.sol'))
-
-
 
 class TabuSearch:
     def __init__(self,filename):
@@ -247,7 +247,6 @@ class TabuSearch:
         return moves
 
     def kick(self,event_id):
-        # event_id=random.choice(list(self.solution_set.keys()))
         event_id2=random.choice(list(self.solution_set.keys()))
         random.seed=int(time.time())
         shuffle_slots=self.problem.event_available_rooms[event_id2]

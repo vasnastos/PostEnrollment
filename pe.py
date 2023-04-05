@@ -519,18 +519,12 @@ class Solution:
     def kempe_chain(self):
         kc=LifoQueue()
         event_id1=random.randint(0,self.problem.E-1)
-        event_id2=None
-        eneighbors=list(self.problem.G.neighbors(event_id1))
-        valid_move=False
-        while len(eneighbors)==0 and not valid_move:
-            event_id1=random.randint(0,self.problem.E-1)
-            eneighbors=self.problem.G.neighbors(event_id1)
-            for event_id_neighbor in eneighbors:
-                valid_move=(self.solution_set[event_id_neighbor]['P'] in self.problem.event_available_periods[event_id] and self.solution_set[event_id]['P'] in self.problem.event_available_periods[event_id_neighbor])
-                if valid_move:
-                    event_id2=event_id_neighbor
-                    break 
-        if event_id2==None: return dict()
+        event_id2=random.randint(0,self.problem.E-1)
+        valid_move=self.can_be_moved(event_id1,self.solution_set[event_id2]['P'],excluded=[event_id2]) and self.can_be_moved(event_id2,self.solution_set[event_id1]['P'],excluded=[event_id1])
+        while event_id1==event_id2 or not valid_move:
+            event_id2=random.randint(0,self.problem.E-1)
+            valid_move=self.can_be_moved(event_id1,self.solution_set[event_id2]['P'],excluded=[event_id2]) and self.can_be_moved(event_id2,self.solution_set[event_id1]['P'],excluded=[event_id1])
+
         versus_periods={
             self.solution_set[event_id1]['P']:self.solution_set[event_id2]['P'],
             self.solution_set[event_id2]['P']:self.solution_set[event_id1]['P']
@@ -542,19 +536,23 @@ class Solution:
             current_event=kc.get()
             current_period=self.solution_set[current_event]['P']
             new_period=versus_periods[current_period]
-            moves[current_event]=new_period
             eneighbors=self.problem.G.neighbors(current_event)
-            for neighbor in eneighbors:
-                if neighbor in moves: continue
-                if self.solution_set[neighbor]['P']==new_period:
-                    kc.put(neighbor)
-        
+            if self.can_be_moved(current_event,new_period,excluded=list(moves.keys())):
+                moves[current_event]=new_period
+                for neighbor in eneighbors:
+                    if neighbor in moves: continue
+                    if self.solution_set[neighbor]['P']==new_period:
+                        kc.put(neighbor)
+            else:
+                return dict()
+            
         potential_solution={}
         for event_id,period_id in moves.items():
             found=False
             for room_id in self.problem.event_available_rooms[event_id]:
                 if self.room_available(period_id,room_id,excluded=[event_id]):
                     potential_solution[event_id]=(period_id,room_id)
+                    found=True
             if not found:
                 return dict()
         return potential_solution
@@ -569,7 +567,7 @@ class Solution:
         if self.can_be_moved(event_id1,self.solution_set[event_id2]['P'],excluded=[event_id2]):
             for room_id in range(self.problem.R):
                 if self.room_available(self.solution_set[event_id2]['P'],room_id):
-                    potential_solution[event_id1]=(self.solution_set[event_id1]['P'])
+                    potential_solution[event_id1]=(self.solution_set[event_id2]['P'],room_id)
         
         if event_id1 in potential_solution:
             previous_day=self.solution_set[event_id2]['P']//self.problem.periods_per_day
@@ -579,8 +577,9 @@ class Solution:
                     if self.room_available(event_id2,new_event2_period):
                         potential_solution[event_id2]=(new_event2_period,room_id)
                         break
-                return potential_solution
-        
+                if event_id2 in potential_solution:
+                    return potential_solution
+
         return dict()
 
     def select_operator(self):
