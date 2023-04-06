@@ -1,34 +1,350 @@
 from ortools.sat.python import cp_model
 import docplex.cp.model as cpx
-from pe import Problem,PRF,Solution
-import os,pickle
+from pe import Problem,PRF
+from solution import Solution
+from queue import LifoQueue
+import os,time,math,random,sys,copy
 from itertools import combinations,product
+from rich.console import Console
 import gurobipy as gp
 
-class SolverInfo:
-    instance=None
-    @staticmethod
-    def get_instance():
-        if SolverInfo.instance==None:
-            SolverInfo.instance=SolverInfo("",None)
-        return SolverInfo.instance
-
-    def __init__(self,solution_description,solver_type):
-        self.description=solution_description
-        self.stype=solver_type
+class TabuSearch:
+    def __init__(self,filename):
+        self.problem=Problem()
+        self.problem.read(filename)
+        self.solution_set={event_id:(-1,-1) for event_id in range(self.problem.E)}
+        self.periodwise_solutions={period_id:list() for period_id in range(self.problem.P)}
     
-    def set_params(self,description=None,solvertype=None):
-        if description:
-            self.description=description
-        if solvertype:
-            self.stype=solvertype
+    def modify(self,event_id,value,wise='period'):
+        if wise=='period':
+            self.solution_set[event_id]['P']=value
+        elif wise=='room':
+            self.solution_set[event_id]['R']=value
+
+    def can_be_moved(self,wise='room',excluded=[],**kwargs):
+        if wise=='room':
+            if 'room' not in kwargs:
+                raise ValueError("Room does not appear in kwargs")
+            if 'period' not in kwargs:
+                raise ValueError("Period does not appear in kwargs")
+            
+            room_id=int(kwargs['room'])
+            period_id=int(kwargs['period'])
+
+            for event_id in self.periodwise_solution[period_id]:
+                if event_id in excluded: continue
+                if self.solution_set[event_id]['R']==room_id:
+                    return False
+            return True
+        
+        elif wise=='period':
+            if 'event' not in kwargs:
+                raise ValueError("Room does not appear in kwargs")
+            if 'period' not in kwargs:
+                raise ValueError("Period does not appear in kwargs")
+
+            event_id=int(kwargs['event'])
+            period_id=int(kwargs['period'])
+
+            for neighbor_id in list(self.problem.G.neighbors(event_id)):
+                if period_id==self.solution_set[neighbor_id]['P']:
+                    return False
+            return True
+
+        raise ValueError("You did not provide right argument type")
+
+    def transfer(self,event_id):
+        random.seed=int(time.time())
+        shuffled_rooms=list(range(self.problem.R))
+        random.shuffle(shuffled_rooms)
+
+        event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))-1]
+
+        for room_id in shuffled_rooms:
+            if room_id in self.problem.event_available_rooms[event_id]:
+                if self.can_be_moved(wise='room',room=room_id,period=self.solution_set[event_id]['P']):
+                    return {
+                        event_id:(self.solution_set[event_id]['P'],room_id)
+                    }
+                
+    def swap(self,event_id):
+        # event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        event_id2=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        while event_id2==event_id:
+            event_id2=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        if self.can_be_moved(wise='room',excluded=[event_id2],room=self.solution_set[event_id2]['R'],period=self.solution_set[event_id]['P']) and self.can_be_moved(wise='room',excluded=[event_id],room=self.solution_set[event_id]['R'],period=self.solution_set[event_id2]['P']):
+            return {
+                event_id:(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R']),
+                event_id2:(self.solution_set[event_id2]['P'],self.solution_set[event_id]['R'])
+            }
+        return dict()
     
-    def get_solver_type(self):
-        return self.stype
+    def kempe_chain(self,event_id):
+        # event_id=list(self.solution_set.keys())[random.randint(0,len(list(self.solution_set.keys())))]
+        event_id2=random.choice(self.problem.G.neighbors(event_id))
 
-    def get_solution_info(self):
-        return self.description
+        versus_period={
+            self.solution_set[event_id]['R']:self.solution_set[event_id2]['R'],
+            self.solution_set[event_id2]['R']:self.solution_set[event_id]['R']
+        }
 
+        kc=LifoQueue()
+        kc.put(event_id)
+        moves={}
+        while not kc.empty():
+            current_event=kc.get()
+            current_room=self.solution_set[current_event]['R']
+            new_room=versus_period[current_room]
+            moves[current_event]=new_room
+            for neighbor_id in list(self.problem.G.neighbors(current_event)):
+                if neighbor_id in moves: continue
+                if self.solution_set[neighbor_id]['R']==new_room:
+                    kc.put(neighbor_id)
+        
+        return moves
+
+    def kick(self,event_id):
+        event_id2=random.choice(list(self.solution_set.keys()))
+        random.seed=int(time.time())
+        shuffle_slots=self.problem.event_available_rooms[event_id2]
+        random.shuffle(shuffle_slots)
+        
+        while event_id==event_id2:
+            event_id2=random.choice(list(self.solution_set.keys()))
+        
+        if self.solution_set[event_id2]['R'] not in self.problem.event_available_rooms[event_id]:
+            return dict()
+
+        candicate_move=dict()
+        if self.can_be_moved(wise='room',excluded=[event_id2],room=self.solution_set[event_id2]['R'],period=self.solution_set[event_id]['P']):
+            candicate_move[event_id]=(self.solution_set[event_id]['P'],self.solution_set[event_id2]['R'])
+        
+        complete_kick_move=False
+        for room_id in shuffle_slots:
+            if room_id==self.solution_set[event_id2]['R']: continue
+            if self.can_be_moved(wise='room',room=room_id,period=self.solution_set[event_id]['P']):
+                candicate_move[event_id2]=(self.solution_set[event_id2]['P'],room_id)
+                complete_kick_move=True
+                break
+        
+        if complete_kick_move:
+            return candicate_move
+        return dict()
+
+
+    def TS(self,tabu_size=500):
+        unplacedE=list(range(self.solution.problem.E))
+        current_solution={event_id:-1 for event_id in range(self.solution.problem.E)}
+        current_best_solution=current_solution
+        current_best_objective=sys.maxsize
+        console=Console(record=True)
+        tabu_list=list()
+        memory=dict()
+        start_timer=time.time()
+        console.rule('[bold red] Tabu Search Initial Solution')
+        obj=lambda unplacedE_val:len(unplacedE)
+
+        while len(unplacedE)!=0:
+            minimum_cost=sys.maxsize
+            best_event=None
+            best_slot=None
+            unplacedE_copy=copy.copy(unplacedE)
+            for event_id in unplacedE:
+                unplacedE_copy.remove(event_id)
+                for timeslot in self.solution.problem.event_available_periods[event_id]:
+                    if self.solution.can_be_moved(event_id,timeslot,excluded=self.solution.problem.G.neighbors(event_id)):
+                        memory.clear()
+                        for neighbor_id in self.solution.problem.G.neighbors(event_id):
+                            memory[neighbor_id]=(current_solution[neighbor_id],neighbor_id not in unplacedE)
+                            current_solution.pop(neighbor_id)
+                            if neighbor_id not in unplacedE_copy:
+                                unplacedE_copy.append(neighbor_id)
+                        
+                        if obj(unplacedE)<minimum_cost and current_solution not in tabu_list:
+                            best_event=event_id
+                            best_slot=timeslot
+                            minimum_cost=len(unplacedE_copy)
+                        
+                        for neighbor_id in self.solution.problem.G.neighbors(event_id):
+                            current_solution[neighbor_id]=memory[neighbor_id][0]
+                            if not memory[neighbor_id][1]:
+                                unplacedE_copy.remove(neighbor_id)
+                
+                unplacedE_copy.append(event_id)
+            
+            if best_event:
+                console.log(f'[bold green] New candicate Solution\tE{best_event}->P{best_slot} Objective:{minimum_cost}')
+            
+                for neighbor_id in self.solution.problem.neighbors(best_event):
+                    if neighbor_id in current_solution:
+                        current_solution.pop(neighbor_id)
+                        unplacedE_copy.append(neighbor_id)
+                
+                if obj(unplacedE_copy)<current_best_objective:
+                    current_best_objective=obj(unplacedE_copy)
+                    current_solution[best_event]=best_slot
+                    for neighbor_id in self.solution.problem.neighbors(best_event):
+                        if neighbor_id in current_solution:
+                            current_solution.pop(neighbor_id)
+                    current_best_solution=current_solution
+
+                if len(tabu_list)==tabu_size:
+                    tabu_list.pop(0)
+                tabu_list.append(current_solution)
+
+            if time.time()-start_timer:
+                break
+        return current_solution
+
+    def TSSP(self,best,unassignedE,timesol):
+        console=Console(record=True)
+        unplacedE=copy.copy(unassignedE)
+        current_solution=copy.copy(best)
+        obj=lambda unplacedE_val:sum([1+self.solution.problem.clashe(event_id)/self.solution.problem.total_clash for event_id in unplacedE_val])
+        ITER=math.pow(self.solution.problem.R,3)
+        memory=dict()
+        tabu_list=list()
+        i=0
+        start_time=time.time()
+        console.rule('[bold red]TSSP Procedure')
+        while len(unplacedE)==0:
+            sampleE=[unplacedE[random.randint(0,len(unplacedE)-1)] for _ in range(10)]
+            min_unplaced_cost=sys.maxsize
+            best_event=None
+            best_timeslot=None
+            
+            for event_id in sampleE:
+                for timeslot in self.solution.problem.event_available_periods[event_id]:
+                    memory.clear()
+                    for neighbor_id in list(self.solution.problem.G.neighbors(event_id)):
+                        if neighbor_id in self.solution_set:
+                            memory[neighbor_id]=current_solution[neighbor_id]
+                            if neighbor_id in current_solution:
+                                current_solution.pop(neighbor_id)
+                            if neighbor_id not in unplacedE:
+                                unplacedE.append(neighbor_id)
+                    
+                    if obj(current_solution.keys())<min_unplaced_cost:
+                        best_event=event_id
+                        best_timeslot=timeslot
+
+                    for neighbor_id in list(self.solution.problem.G.neighbors(event_id)):
+                        current_solution[neighbor_id]=memory[neighbor_id]
+                        unplacedE.remove(neighbor_id)
+
+                tabu_list.append(current_solution)
+                unplacedE.append(event_id)
+            
+            if best_event:
+                for event_id in self.solution.problem.G.neighbors(best_event):
+                    if event_id in current_solution:
+                        current_solution.pop(event_id)
+                current_solution[best_event]=best_timeslot
+                min_unplaced_cost=obj(current_solution.keys())
+
+            if obj(current_solution.keys())<obj(best.keys()):
+                best=current_solution
+                unassignedE=unplacedE
+            
+            
+            unplacedE.remove(best_event)
+            for neighbor_id in self.solution.problem.G.neighbors(best_event):
+                if neighbor_id not in unplacedE:
+                    unplacedE.append(neighbor_id)
+            
+            i+=1
+            if i==ITER:
+                for event_id,period_id in current_solution.items():
+                    self.modify(event_id,period_id,wise='period')
+                
+                self.Perturb()
+                i=0
+                tabu_list.clear() 
+            if time.time()-start_time>timesol:
+                break
+    
+    def Perturb(self):
+        for event_id in list(self.solution_set.keys()):
+            for _ in range(len(self.problem.event_available_rooms[event_id])):
+                roperator=random.randint(1,4)
+                if roperator==1:
+                    self.transfer(event_id)
+                elif roperator==2:
+                    self.swap(event_id)
+                elif roperator==3:
+                    self.kempe_chain(event_id)
+                elif roperator==4:
+                    self.kick(event_id)
+
+class HCLA:
+    def __init__(self,ds_name) -> None:
+        self.solution=Solution(ds_name)
+        self.console=Console(record=True)
+
+    def preprocessing(self):
+        init_sol=create_timetable(problem=self.solution.problem,csolver='cp-sat',timesol=600)
+        if init_sol!={}:
+            self.solution.set_solution(init_sol)
+            self.console.print(f'[bold green] Initial solution cost using gurobi solver:{self.solution.cost}')
+
+        for day in range(self.solution.problem.days):
+            partial_sol=solve(problem=self.solution.problem,tsolver='cp-sat',day_by_day=True,timesol=60,day=day)
+            if partial_sol!={}:
+                previous_day_cost=self.solution.compute_daily_cost(day)
+                self.solution.set_solution(partial_sol)
+                self.console.print(f'[bold]HCLA| Day by day Improvement| Solution Cost:{previous_day_cost}->{self.solution.compute_daily_cost(day)}')
+        
+        self.console.print(f'[bold green]New solution Cost:{self.solution.cost}')
+
+
+    def solve(self,timesol):
+        self.preprocessing()
+        
+        Bs=self.solution.solution_set
+        Bc=self.solution.cost
+        iter_id=0
+        temperature=1000
+        start_timer=time.time()
+
+        while True:
+            candicate_sol=self.solution.select_operator()
+            previous_cost=self.solution.cost
+            self.solution.reposition(candicate_sol)
+            delta=self.solution.cost-previous_cost
+            if self.solution.cost<previous_cost:
+                if self.solution.cost<Bc:
+                    Bs=self.solution.solution_set
+                    Bc=self.solution.cost
+                    self.console.print(f"HCLA |New solution found| S:{self.solution.cost}\tT:{temperature}")
+            elif self.solution.cost>previous_cost:
+                iter_id+=1
+                if random.random()<math.exp(-delta*temperature):
+                    # Solution accepted 
+                    pass
+                else:
+                    self.solution.rollback()
+            else:
+                iter_id+=1
+            
+            if iter_id%1000000==0:
+                number_of_days=random.randint(2,3)
+                daily_costs={day:self.solution.compute_daily_cost(day) for day  in range(self.solution.problem.days)}
+                sorted_daily_costs=list(sorted(daily_costs.items(),key=lambda x:x[1],reverse=True))
+
+                days_checked=[sorted_daily_costs[i][0] for i in range(number_of_days)]
+                timer=random.randint(200,500)
+                partial_sol=solve(problem=self.solution.problem,days_combined=True,timesol=timer,days=days_checked)
+                if partial_sol!={}:
+                    self.solution.set_solution(partial_sol)
+                    self.console.print(f'[bold green]HCLA| New solution found using DAYS_COMBINED_SOLVER| S:{self.solution.cost}')
+                    Bs=self.solution.solution_set
+                    Bc=self.solution.cost
+        
+            if time.time()-start_timer>timesol:
+                break
+        
+        self.console.print(f'[bold green]HCLA| Procedurte ended| Best cost found:{Bc}')
+        return Bs
 
 def create_timetable(problem:"Problem",csolver='cp-sat',timesol=600):
     """
@@ -41,8 +357,6 @@ def create_timetable(problem:"Problem",csolver='cp-sat',timesol=600):
         Returns:
             - dict: contains the generated timetable
     """
-    sparams=SolverInfo.get_instance()
-    sparams.set_params(description="Initial_Timetable_Construction",solvertype=csolver)
 
     generated_solution={}
     if csolver=='cp-sat':
@@ -120,7 +434,7 @@ def create_timetable(problem:"Problem",csolver='cp-sat',timesol=600):
                             for period_id in range(problem.P)
                         ])
                     )
-        
+
         solver=cp_model.CpSolver()
         solver.parameters.max_time_in_seconds=timesol
         solver.parameters.num_search_workers=os.cpu_count()
@@ -276,13 +590,11 @@ def create_timetable(problem:"Problem",csolver='cp-sat',timesol=600):
 
 
 def solve(problem:"Problem",tsolver='cp-sat',day_by_day=False,days_combined=False,full=False,timesol=600,**kwargs):
-    sparams=SolverInfo.get_instance()
-    sparams.set_params(solvertype=tsolver)
     generated_solution=dict()
 
     if sum([day_by_day,full,days_combined])==0:
         raise ValueError("Both day_by_day and full params setted to False.\n You should set one of the parameters in True")
-    elif sum([day_by_day,full])>1:
+    elif sum([day_by_day,full,days_combined])>1:
         raise ValueError("You set day_by_day and full solver to True. You must select one of the solvers to use")
 
 
@@ -398,14 +710,13 @@ def solve(problem:"Problem",tsolver='cp-sat',day_by_day=False,days_combined=Fals
             solver=cp_model.CpSolver()
             solver.parameters.max_time_in_seconds=timesol
             solver.parameters.num_search_workers=os.cpu_count()
-            status=solver.Solve(model)
+            status=solver.Solve(model,cp_model.ObjectiveSolutionPrinter)
             if status in [cp_model.OPTIMAL,cp_model.FEASIBLE]:
                 for (event_id,room_id,period_id),dvar in xvars.items():
                     if solver.Value(dvar)==1:
                         generated_solution[event_id]=(period_id,room_id)
     
     elif day_by_day:
-        sparams.set_params(description="Day_by_day_optimizer")
         if 'day' not in kwargs:
             raise ValueError("Day-by-Day solver called and no day provided")
         if 'solution_hint' not in kwargs:
@@ -602,7 +913,7 @@ def solve(problem:"Problem",tsolver='cp-sat',day_by_day=False,days_combined=Fals
                             for event_id in ecombination
                             for room_id in range(problem.R)
                             for pid in range(period_id,period_id+3)
-                        ])<2+consecutive_events[ecombination]
+                        ])<=2+consecutive_events[ecombination]
                     )
             
             objective=[
@@ -704,7 +1015,6 @@ def solve(problem:"Problem",tsolver='cp-sat',day_by_day=False,days_combined=Fals
                     generated_solution[event_id]=(period_id,room_id)
     
     elif days_combined:
-        sparams.set_params(description='Days_combined_optimizer')
         if 'days' not in kwargs:
             raise ValueError("You did not provide the right amount of arguments in the solver")
         days=kwargs['days']
@@ -863,44 +1173,5 @@ def solve(problem:"Problem",tsolver='cp-sat',day_by_day=False,days_combined=Fals
 
     return generated_solution
 
-
-def solution_cropper(problem:Problem,days_subset,solution_hint:dict,timesol=600):
-    model=cp_model.CpModel()
-    periods=[]
-    for day in days_subset:
-        count=1
-        for period in range(day*problem.periods_per_day,day*problem.periods_per_day+problem.periods_per_day):
-            if count%3!=0:
-                periods.append(period)
-    eset=[event_id for event_id,(period_id,_) in solution_hint.items() if period_id in periods]
-    xvars={(event_id,room_id,period_id):model.NewBoolVar(name=f'{event_id}_{room_id}_{period_id}') for event_id in eset for room_id in range(problem.R) for period_id in periods}
-
-    for event_id in eset:
-        model.Add(
-            sum([
-                xvars[(event_id,room_id,period_id)]
-                for room_id in range(problem.R)
-                for period_id in range(problem.P)
-            ])==1
-        )
-    
-    for event_id in eset:
-        for room_id in range(problem.R):
-            if room_id not in problem.event_available_rooms[event_id]:
-                model.Add(
-                    sum([
-                        xvars[(event_id,room_id,period_id)]
-                        for period_id in periods
-                    ])==0
-                )
-        
-        for period_id in periods:
-            if period_id not in problem.event_available_periods[event_id]:
-                model.Add(
-                    sum([
-                        xvars[(event_id,room_id,period_id)]
-                        for room_id in range(problem.R)
-                    ])==0
-                )
 
 
