@@ -96,5 +96,10 @@ class SimulatedAnnealing:
         self.solution.set_solution(best_solution)
         self.solution.save(filepath=os.path.join('','results','simulated_annealing',f'{self.solution.problem.id}_{self.solution.compute_cost()}.sol'))
     
+    def save(self):
+        with open(os.path.join('','results','SimulatedAnnealing',f'{self.solution.problem.id}_{self.solution.compute_cost()}.sln'),'w') as writer:
+            for event_id,sol_vars in self.solution.solution_set.items():
+                writer.write(f'{sol_vars["P"]} {sol_vars["R"]}\n')
+
     def plot(self):
         pass

@@ -189,15 +189,7 @@ class Problem:
         console.print(f'[bold green]Average room size:{self.average_room_size}')
         console.print(f'[bold green]Average room suitability:{self.average_room_suitability}')
         console.print(f'[bold green]Average event period unavailability:{self.average_event_period_unavailability}',end='\n\n')
-        console.print(f'[bold green] Has precedence')
-    
-    def create_hints(self,eset,solution_hint):
-        student_set={student_id for event_id in eset for student_id in self.events[event_id]['S']}
-        hints={student_id:{period_id:False for period_id in range(self.problem.P)} for student_id in student_set}
-        for event_id in eset:
-            for student_id in self.problem.events[event_id]['S']:
-                hints[student_id][solution_hint[event_id]['P']]=True
-        return hints
+        console.print(f'[bold green] Has precedence:{PRF.has_extra_constraints(self.formulation)}')
 
     def frozenrooms(self)->dict:
         distinct_rooms=dict()
@@ -207,6 +199,21 @@ class Problem:
                 distinct_rooms[froom_set]=list()
             distinct_rooms[froom_set].append(event_id)    
         return distinct_rooms
+
+    def create_hints(self,eset,solution_hint):
+        hints={student_id:{period_id:False for period_id in range(self.P)} for student_id in range(self.S)}
+        for event_id in range(self.E):
+            if event_id in eset: continue
+            for student_id in self.events[event_id]['S']:
+                hints[student_id][solution_hint[event_id]['P']]=True
+        return hints
+
+    def create_event_hints(self,eset,solution_set):
+        ehints={event_id:{(room_id,period_id):False for room_id in range(self.R) for period_id in range(self.P)} for event_id in range(self.E)}
+        for event_id in range(self.E):
+            if event_id in eset: continue
+            ehints[event_id][(solution_set[event_id]['R'],solution_set[event_id]['P'])]=True
+        return ehints
 
     def plot_graph(self):
         screen = screeninfo.get_monitors()[1]

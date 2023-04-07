@@ -55,6 +55,39 @@ def scenario2():
         sa_obj.set_solution(sol)
         sa_obj.save(os.path.join(f'','results',f'{instance.removesuffix(".tim")}_{sa_obj.compute_cost()}.sln'))
 
+
+def scenario3():
+    instances=[
+        "o01.tim",
+        "o02.tim",
+        "o03.tim",
+        "o04.tim",
+        "o05.tim",
+        "o06.tim",
+        "o07.tim",
+        "o08.tim",
+        "o09.tim",
+        "o010.tim",
+        "o011.tim",
+        "o012.tim",
+        "o013.tim",
+        "o014.tim",
+        "o015.tim",
+        "o016.tim",
+        "o017.tim",
+        "o018.tim",
+        "o019.tim",
+        "o020.tim",
+    ]
+
+    arena=Arena()
+    for instance in instances:
+        sa=SimulatedAnnealing(instance)
+        sa.solve(timesol=3000)
+        sa.save()
+        arena.add(instance,sa.solution.problem.E,sa.solution.problem.R,sa.solution.problem.conflict_density,sa.solution.compute_cost())
+    arena.save()
+
 if __name__=='__main__':
     # scenario1()
     scenario2()
