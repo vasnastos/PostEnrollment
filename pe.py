@@ -41,6 +41,25 @@ class PRF(Enum):
     @staticmethod
     def named_formulation(formulation):
         return "original" if formulation==PRF.HarderLewisPaechter or formulation==PRF.MetaheuristicsNetwork else "full"
+    
+    @staticmethod
+    def to_sql():
+        import sqlite3 as sql
+        path_to_db=os.path.join('','instances','ditPECTThub.db')
+        try:
+            conn=sql.connect(path_to_db)
+        except sql.Error as err:
+            print(err)
+        
+        cursor=conn.cursor()
+        cursor.execute("CREATE TABLE IF NOT EXISTS PECTT(Id text,Formulation text,Events integer,Feature integer,Rooms integer,Students integer,Density real,Average_Room_Size real,Average_Room_suitability real,Cost integer)")
+
+
+        for instance in Problem.get_instances():
+            cursor.execute("INSERT INTO PECTT(Id,Formulation) VALUES(?,?)",instance.removesuffix('.tim'),PRF.get_formulation(instance))
+        conn.commit()
+        cursor.close()
+        conn.close()
 
 class Problem:
     path_to_datasets=os.path.join('.','instances')

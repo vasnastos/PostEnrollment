@@ -1,4 +1,3 @@
-package problem
 import (
 	"fmt"
 	"io"

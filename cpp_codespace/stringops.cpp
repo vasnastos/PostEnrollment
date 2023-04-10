@@ -1,7 +1,5 @@
-#include "astring.hpp"
-using namespace std;
+#include "stringops.hpp"
 
- 
 std::string ltrim(const std::string &s) {
     return std::regex_replace(s, std::regex("^\\s+"), std::string(""));
 }

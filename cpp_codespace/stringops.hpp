@@ -1,7 +1,7 @@
-#pragma once
-#include <iostream>
 #include <string>
 #include <regex>
+
+using namespace std;
 
 std::string ltrim(const std::string &s);
 std::string rtrim(const std::string &s);
