@@ -86,6 +86,7 @@ void Problem::read(string filename)
         }
     }
 
+    // Precedence relations between events
     for(int eid=0;eid<this->E;eid++)
     {
         for(int eid2=0;eid2<this->E;eid2++)
@@ -138,17 +139,18 @@ void Problem::read(string filename)
 
 double Problem::density()
 {
-
+    return 2*this->G.number_of_edges()/this->G.number_of_nodes()*(this->G.number_of_nodes()-1);
 }
 
 double Problem::average_room_suitability()
 {
-
+    auto s=accumulate(this->event_available_rooms.begin(),this->event_available_rooms.end(),0,[&](int s,const pair <int,vector <int>> &pav) {return s+pav.second.size();});
+    return static_cast<double>(s)/(this->R*this->E);
 }
 
 double Problem::average_room_size()
 {
-
+    return accumulate(this->rooms.begin(),this->rooms.end(),0,[&](int s,const Room &room) {return s+room.capacity;});
 }
 
 double Problem::precedence_density()

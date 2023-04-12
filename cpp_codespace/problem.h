@@ -1,6 +1,7 @@
 #include "base.h"
 #include <set>
 #include <algorithm>
+#include <numeric>
 #include "stringops.hpp"
 #include "graph.h"
 
@@ -25,7 +26,6 @@ class Problem
 
         map <int,vector <int>> event_available_periods;
         map <int,vector <int>> event_available_rooms;
-
         Graph G;
 
         Problem();
