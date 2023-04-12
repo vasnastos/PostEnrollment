@@ -21,4 +21,10 @@ class Solution
 
         int compute_cost();
         int compute_daily_cost(int day);
+
+        map <int,Sol> transfer_event();
+        map <int,Sol> swap_events();
+        map <int,Sol> kempe_chain();
+        map <int,Sol> kick();
+        map <int,Sol> double_kick();
 };
