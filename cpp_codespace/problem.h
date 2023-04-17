@@ -1,11 +1,11 @@
 #include "base.h"
-#include <set>
-#include <algorithm>
-#include <numeric>
 #include "stringops.hpp"
 #include "graph.h"
+#include <random>
+#include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 
 
 class Problem
@@ -22,6 +22,7 @@ class Problem
         int number_of_periods;
         vector <Event> events;
         vector <Room> rooms;
+        vector <int> final_periods_per_day;
         map <int,vector <int>> students;
 
         map <int,vector <int>> event_available_periods;

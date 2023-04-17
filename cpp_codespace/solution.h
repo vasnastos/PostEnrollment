@@ -4,14 +4,19 @@ struct Sol
 {
     int period;
     int room;
+    Sol(int p_,int r_);
 };
 
 class Solution
 {
     private:
+        Problem *problem;
         map <int,Sol> solution_set;
         map <int,vector <int>> periodwise_solutions;
         map <int,vector <int>> roomwise_solutions;
+
+        uniform_int_distribution <int> rand_event;
+        mt19937 mt;
     public:
         Solution(string filename);
         ~Solution();
@@ -22,9 +27,12 @@ class Solution
         int compute_cost();
         int compute_daily_cost(int day);
 
-        map <int,Sol> transfer_event();
-        map <int,Sol> swap_events();
-        map <int,Sol> kempe_chain();
-        map <int,Sol> kick();
-        map <int,Sol> double_kick();
+        bool can_be_moved(const int &event,const int &period,const vector <int> &excluded={});
+        bool is_room_available(const int &room_id,const int &period_id);
+
+        map <int,Sol> transfer_event(int &event);
+        map <int,Sol> swap_events(int &event);
+        map <int,Sol> kempe_chain(int &event);
+        map <int,Sol> kick(int &event);
+        map <int,Sol> double_kick(int &event);
 };

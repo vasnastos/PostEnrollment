@@ -107,22 +107,21 @@ void Problem::read(string filename)
     fp.close();
 
     // Create event-event relations based on common students
-    set <int> *common_students=new set<int>();
+    set <int> common_students;
     
     for(int e1=0;e1<this->E;e1++)
     {
         this->G.add_node(e1);
         for(int e2=e1+1;e2<this->E;e2++)
         {
-            std::set_intersection(this->events[e1].students.begin(),this->events[e1].students.end(),this->events[e2].students.begin(),this->events[e2].students.end(),common_students->begin());
-            if(common_students->size()>0)
+            std::set_intersection(this->events[e1].students.begin(),this->events[e1].students.end(),this->events[e2].students.begin(),this->events[e2].students.end(),common_students.begin());
+            if(common_students.size()>0)
             {
-                this->G.add_edge(e1,e2,common_students->size());
+                this->G.add_edge(e1,e2,common_students.size());
             }
-            common_students->clear();
+            common_students.clear();
         }
     }
-    delete common_students;
 
     // Create room-event availability relations
     for(int eid=0;eid<this->E;eid++)
@@ -134,6 +133,11 @@ void Problem::read(string filename)
                 this->event_available_rooms[eid].emplace_back(rid);
             }
         }
+    }
+
+    for(int day=0;day<this->number_of_days;day++)
+    {
+        this->final_periods_per_day.emplace_back(day*this->number_of_periods+this->number_of_periods-1);
     }
 }
 
