@@ -53,7 +53,7 @@ class PRF
         PRF();
         ~PRF();
 
-        static PRF& get_instance();
+        static PRF* get_instance();
         static void  flush();
         void load();
         bool has_precedence_relation(string dataset_id);

@@ -2,6 +2,8 @@
 
 Sol::Sol(int p_,int r_):period(p_),room(r_) {}
 
+Sol::Sol(const Sol &sln):period(sln.period),room(sln.room) {}
+
 Solution::Solution(string filename)
 {
     this->problem=new Problem;
@@ -143,17 +145,87 @@ int Solution::compute_daily_cost(int day)
             }
         }
     }
-
+    return daily_cost;
 }
 
 map <int,Sol> Solution::transfer_event(int &event)
 {
-    
+
+    for(int period_id=0;period_id<this->problem->P;period_id++)
+    {
+        if(period_id==this->solution_set[event].period) continue;
+        if(this->can_be_moved(event,period_id))
+        {
+            for(int room_id=0;room_id<this->problem->R;room_id++)
+            {
+                if(this->is_room_available(room_id,period_id))
+                {
+                    return {
+                        {event,Sol(period_id,room_id)}
+                    };
+                }
+            }
+        }
+    }
+    return map <int,Sol>();
 }
 
 map <int,Sol> Solution::swap_events(int &event)
 {
+    vector <int> eneighbors=this->problem->G.neighbors(event);
+    for(auto &event_id2:eneighbors)
+    {
+        if(this->can_be_moved(event,this->solution_set[event_id2].period,{event_id2}) && this->can_be_moved(event_id2,this->solution_set[event].period,{event}))
+        {
+            // Keep the same room
+            if(this->is_room_available(this->solution_set[event].room,this->solution_set[event_id2].period) && this->is_room_available(this->solution_set[event].room,this->solution_set[event_id2].period))
+            {
+                return {
+                    {event,Sol(this->solution_set[event_id2].period,this->solution_set[event].room)},
+                    {event_id2,Sol(this->solution_set[event].period,this->solution_set[event_id2].room)}
+                };
+            }
+            else if(this->is_room_available(this->solution_set[event_id2].room,this->solution_set[event_id2].period) && this->is_room_available(this->solution_set[event].room,this->solution_set[event].period))
+            {
+                return {
+                    {event,Sol(this->solution_set[event_id2])},
+                    {event_id2,Sol(this->solution_set[event])}
+                };
+            }
+            else
+            {
+                map <int,Sol> moves={
+                    {event,Sol(this->solution_set[event_id2].period,-1)},
+                    {event_id2,Sol(this->solution_set[event].period,-1)}
+                };
 
+                // Find suitable room for the first event
+                for(int room_id=0;room_id<this->problem->R;room_id++)
+                {
+                    if(this->is_room_available(room_id,moves[event].period))
+                    {
+                        moves[event].room=room_id;
+                        break;
+                    }
+                }
+
+                // Find suitable room for the second event
+                for(int room_id=0;room_id<this->problem->R;room_id++)
+                {
+                    if(this->is_room_available(room_id,moves[event_id2].period))
+                    {
+                        moves[event_id2].room=room_id;
+                        break;
+                    }
+                }
+                if(moves[event].room!=-1 && moves[event_id2].room!=-1)
+                {
+                    return moves;
+                }
+            }
+        }   
+    }
+    return map <int,Sol>();
 }
 
 map <int,Sol> Solution::kempe_chain(int &event)
@@ -163,7 +235,22 @@ map <int,Sol> Solution::kempe_chain(int &event)
 
 map <int,Sol> Solution::kick(int &event)
 {
-
+    auto eneighbors=this->problem->G.neighbors(event);
+    
+    for(auto &event_id2:eneighbors)
+    {
+        if(this->can_be_moved(event,this->solution_set[event_id2].period,{event_id2}))
+        {
+            for(int period_id=0;period_id<this->problem->P;period_id++)
+            {
+                if(this->can_be_moved(event_id2,period_id))
+                {
+                    // Find suitable rooms
+                }
+            }
+        }
+    }
+    
 }
 
 map <int,Sol> Solution::double_kick(int &event)
@@ -173,10 +260,27 @@ map <int,Sol> Solution::double_kick(int &event)
 
 bool Solution::can_be_moved(const int &event,const int &period,const vector <int> &excluded={})
 {
-
+    vector <int> eneighbors=this->problem->G.neighbors(event);
+    for(auto &event_id2:eneighbors)
+    {
+        if(find(excluded.begin(),excluded.end(),event_id2)!=excluded.end()) continue;
+        if(this->solution_set[event_id2].period==period)
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool Solution::is_room_available(const int &room_id,const int &period_id)
 {
-    
+
+    for(auto &event_id2:this->periodwise_solutions[period_id])
+    {
+        if(this->solution_set[event_id2].room==room_id)
+        {
+            return false;
+        }
+    }
+    return true;
 }

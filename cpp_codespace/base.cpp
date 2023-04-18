@@ -32,12 +32,13 @@ PRF::~PRF() {
 
 }
 
-PRF& PRF::get_instance()
+PRF* PRF::get_instance()
 {
     if(PRF::_instance==nullptr)
     {
         PRF::_instance=new PRF;
     }
+    return PRF::_instance;
 }
 
 void PRF::set_path(const vector <string> &components)
