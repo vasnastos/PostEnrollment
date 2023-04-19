@@ -99,6 +99,7 @@
         "xtree": "cpp",
         "xutility": "cpp",
         "queue": "cpp",
-        "stop_token": "cpp"
+        "stop_token": "cpp",
+        "xhash": "cpp"
     }
 }

@@ -17,7 +17,7 @@ Solution::~Solution()
     delete this->problem;
 }
 
-int Solution::schedule(int &event_id,int &period_id,int &room_id)
+int Solution::schedule(const int &event_id,const int &room_id,const int &period_id)
 {
     if(this->solution_set.find(event_id)==this->solution_set.end())
     {
@@ -28,7 +28,7 @@ int Solution::schedule(int &event_id,int &period_id,int &room_id)
     this->roomwise_solutions[room_id].emplace_back(event_id);
 }
 
-int Solution::unschedule(int &event_id)
+int Solution::unschedule(const int &event_id)
 {
     std::remove(this->periodwise_solutions[this->solution_set[event_id].period].begin(),this->periodwise_solutions[this->solution_set[event_id].period].end(),event_id);
     std::remove(this->roomwise_solutions[this->solution_set[event_id].room].begin(),this->roomwise_solutions[this->solution_set[event_id].room].end(),event_id);
@@ -148,7 +148,7 @@ int Solution::compute_daily_cost(int day)
     return daily_cost;
 }
 
-map <int,Sol> Solution::transfer_event(int &event)
+map <int,Sol> Solution::transfer_event(const int &event)
 {
 
     for(int period_id=0;period_id<this->problem->P;period_id++)
@@ -170,7 +170,7 @@ map <int,Sol> Solution::transfer_event(int &event)
     return map <int,Sol>();
 }
 
-map <int,Sol> Solution::swap_events(int &event)
+map <int,Sol> Solution::swap_events(const int &event)
 {
     vector <int> eneighbors=this->problem->G.neighbors(event);
     for(auto &event_id2:eneighbors)
@@ -228,15 +228,104 @@ map <int,Sol> Solution::swap_events(int &event)
     return map <int,Sol>();
 }
 
-map <int,Sol> Solution::kempe_chain(int &event)
+map <int,Sol> Solution::kempe_chain(const int &event)
 {
+    map <int,Sol> moves;
+    queue <int> kc;
+    vector <int> eneighbors=this->problem->G.neighbors(event);
+    vector <int> eneighbors2;
+    map <int,int> versus_periods;
+    map <int,int> connections;
+    bool valid_move,stop_flag,first_connection;
+    int current_event;
+    int next_period;
+    for(auto &event_id2:eneighbors)
+    {
+        valid_move=(find(this->problem->event_available_periods[event].begin(),this->problem->event_available_periods[event].end(),this->solution_set[event_id2].period)!=this->problem->event_available_periods[event].end()) && (find(this->problem->event_available_periods[event_id2].begin(),this->problem->event_available_periods[event_id2].end(),this->solution_set[event].period)!=this->problem->event_available_periods[event_id2].end());
+        if(!valid_move) continue;
+        
+        versus_periods.clear();
+        connections.clear();
 
+        versus_periods={
+            {this->solution_set[event].period,this->solution_set[event_id2].period},
+            {this->solution_set[event_id2].period,this->solution_set[event].period}
+        };
+
+        kc.push(event);
+        stop_flag=false;
+        while(!kc.empty())
+        {
+            current_event=kc.front();
+            kc.pop();
+            next_period=versus_periods[this->solution_set[current_event].period];
+            valid_move=(find(this->problem->event_available_periods[current_event].begin(),this->problem->event_available_periods[current_event].end(),next_period)!=this->problem->event_available_periods[current_event].end());
+            if(!valid_move)
+            {
+                stop_flag=true;
+                break;
+            }
+            moves[current_event]=Sol(next_period,-1);
+            eneighbors2=this->problem->G.neighbors(current_event);
+            first_connection=true;
+            for(auto &event_id2:eneighbors2)
+            {
+                if(moves.find(event_id2)!=moves.end())
+                {
+                    continue;
+                }
+                if(first_connection)
+                {
+                    first_connection=false;
+                    connections[current_event]=event_id2;
+                }
+                kc.push(event_id2);
+            }
+        }
+        if(stop_flag) continue;
+        for(auto &[event_id,sol_item]:moves)
+        {
+            // 1. Try to put the event in the same room
+            if(this->is_room_available(this->solution_set[event_id].room,sol_item.period))
+            {
+                sol_item.room=this->solution_set[event_id].room;
+            }
+
+            // 2. Try to place the event in its connection room
+            else if(this->is_room_available(this->solution_set[connections[event_id]].room,sol_item.period))
+            {
+                sol_item.room=this->solution_set[connections[event_id]].room;
+            }
+
+            else
+            {
+                for(int room_id=0;room_id<this->problem->R;room_id++)
+                {
+                    if(room_id==this->solution_set[event_id].room || room_id==this->solution_set[connections[event_id]].room)
+                    {
+                        continue;
+                    }
+                    if(this->is_room_available(room_id,sol_item.period))
+                    {
+                        sol_item.room=room_id;
+                    }
+                }
+            }
+
+            if(sol_item.room==-1)
+            {
+                return map <int,Sol>();
+            }
+        }
+
+        return moves;
+    }
+    return map <int,Sol>();
 }
 
-map <int,Sol> Solution::kick(int &event)
+map <int,Sol> Solution::kick(const int &event)
 {
     auto eneighbors=this->problem->G.neighbors(event);
-    
     for(auto &event_id2:eneighbors)
     {
         if(this->can_be_moved(event,this->solution_set[event_id2].period,{event_id2}))
@@ -245,17 +334,82 @@ map <int,Sol> Solution::kick(int &event)
             {
                 if(this->can_be_moved(event_id2,period_id))
                 {
-                    // Find suitable rooms
+                    map <int,Sol> potential_moves={
+                        {event,Sol(this->solution_set[event_id2].period,-1)},
+                        {event_id2,Sol(period_id,-1)}
+                    };
+                    // Find suitable room for event 1
+                    for(int room_id=0;room_id<this->problem->R;room_id++)
+                    {
+                        if(this->is_room_available(room_id,potential_moves[event].period))
+                        {
+                            potential_moves[event].room=room_id;
+                            break;
+                        }
+                    }
+
+                    if(potential_moves[event].room!=-1)
+                    {
+                        for(int room_id=0;room_id<this->problem->R;room_id++)
+                        {
+                            if(this->is_room_available(room_id,potential_moves[event_id2].period))
+                            {
+                                potential_moves[event_id2].room=room_id;
+                                break;
+                            }
+                        }
+                    }
+
+                    if(potential_moves[event].room!=-1 && potential_moves[event_id2].room!=-1)
+                    {
+                        return potential_moves;
+                    }
                 }
             }
         }
     }
-    
+    return map <int,Sol>();
 }
 
-map <int,Sol> Solution::double_kick(int &event)
+map <int,Sol> Solution::double_kick(const int &event)
 {
+    vector <int> eneighbors,eneighbors2;
+    map <int,Sol> moves;
+    eneighbors=this->problem->G.neighbors(event);
+    for(auto &event_id2:eneighbors)
+    {
+        if(this->can_be_moved(event,this->solution_set[event_id2].period,{event_id2}))
+        {
+            eneighbors2=this->problem->G.neighbors(event_id2);
+        
+            for(auto &event_id3:eneighbors2)
+            {
+                if(event_id3==event) continue;
+                if(this->can_be_moved(event_id2,this->solution_set[event_id3].period,{event_id3}))
+                {
+                    for(int period_id=0;period_id<this->problem->P;period_id++)
+                    {
+                        if(this->can_be_moved(event_id2,period_id,{event}))
+                        {
+                            moves={
+                                {event,Sol(this->solution_set[event_id2].period,-1)},
+                                {event_id2,Sol(this->solution_set[event_id3].period,-1)},
+                                {event_id3,Sol(period_id,-1)}
+                            };
 
+                            // 1. Place the first event
+
+                            // 2. Place the second event
+
+                            // 3. Place the third event
+
+
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool Solution::can_be_moved(const int &event,const int &period,const vector <int> &excluded={})
@@ -283,4 +437,21 @@ bool Solution::is_room_available(const int &room_id,const int &period_id)
         }
     }
     return true;
+}
+
+void Solution::reposition(const int &event,const int &room,const int &period_id)
+{
+    this->memory[event]=Sol(period_id,room);
+    this->unschedule(event);
+    this->schedule(event,room,period_id);
+}
+
+void Solution::reposition(map <int,Sol> &moves)
+{
+    for(auto &[event_id,sol_item]:moves)
+    {
+        this->memory[event_id]=sol_item;
+        this->unschedule(event_id);
+        this->schedule(event_id,sol_item.room,sol_item.period);
+    }
 }

@@ -23,8 +23,8 @@ class Solution
         Solution(string filename);
         ~Solution();
 
-        int schedule(int &event_id,int &period_id,int &room_id);
-        int unschedule(int &event_id);
+        int schedule(const int &event_id,const int &room_id,const int &period_id);
+        int unschedule(const int &event_id);
 
         int compute_cost();
         int compute_daily_cost(int day);
@@ -33,11 +33,12 @@ class Solution
         bool is_room_available(const int &room_id,const int &period_id);
 
         void reposition(const int &event,const int &room,const int &period_id);
+        void reposition(map <int,Sol> &moves);
         void rollback();
 
-        map <int,Sol> transfer_event(int &event);
-        map <int,Sol> swap_events(int &event);
-        map <int,Sol> kempe_chain(int &event);
-        map <int,Sol> kick(int &event);
-        map <int,Sol> double_kick(int &event);
+        map <int,Sol> transfer_event(const int &event);
+        map <int,Sol> swap_events(const int &event);
+        map <int,Sol> kempe_chain(const int &event);
+        map <int,Sol> kick(const int &event);
+        map <int,Sol> double_kick(const int &event);
 };

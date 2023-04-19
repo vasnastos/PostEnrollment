@@ -7,6 +7,7 @@
 #include <set>
 #include <algorithm>
 #include <numeric>
+#include <queue>
 
 
 using namespace std;
