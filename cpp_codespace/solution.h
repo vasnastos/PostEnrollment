@@ -30,15 +30,18 @@ class Solution
         int compute_daily_cost(int day);
 
         bool can_be_moved(const int &event,const int &period,const vector <int> &excluded={});
-        bool is_room_available(const int &room_id,const int &period_id);
+        bool is_room_available(const int &event_id,const int &room_id,const int &period_id,const vector <int> &excluded={});
 
         void reposition(const int &event,const int &room,const int &period_id);
         void reposition(map <int,Sol> &moves);
         void rollback();
+        void set_solution(map <int,Sol> &candicate_solution);
 
         map <int,Sol> transfer_event(const int &event);
         map <int,Sol> swap_events(const int &event);
         map <int,Sol> kempe_chain(const int &event);
         map <int,Sol> kick(const int &event);
         map <int,Sol> double_kick(const int &event);
+
+        void save();
 };

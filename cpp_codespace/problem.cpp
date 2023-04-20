@@ -161,3 +161,8 @@ double Problem::precedence_density()
 {
     
 }
+
+string Problem::get_id()const
+{
+    return this->id;
+}

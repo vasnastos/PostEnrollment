@@ -158,7 +158,7 @@ map <int,Sol> Solution::transfer_event(const int &event)
         {
             for(int room_id=0;room_id<this->problem->R;room_id++)
             {
-                if(this->is_room_available(room_id,period_id))
+                if(this->is_room_available(event,room_id,period_id))
                 {
                     return {
                         {event,Sol(period_id,room_id)}
@@ -178,14 +178,14 @@ map <int,Sol> Solution::swap_events(const int &event)
         if(this->can_be_moved(event,this->solution_set[event_id2].period,{event_id2}) && this->can_be_moved(event_id2,this->solution_set[event].period,{event}))
         {
             // Keep the same room
-            if(this->is_room_available(this->solution_set[event].room,this->solution_set[event_id2].period) && this->is_room_available(this->solution_set[event].room,this->solution_set[event_id2].period))
+            if(this->is_room_available(event,this->solution_set[event].room,this->solution_set[event_id2].period) && this->is_room_available(event_id2,this->solution_set[event].room,this->solution_set[event_id2].period))
             {
                 return {
                     {event,Sol(this->solution_set[event_id2].period,this->solution_set[event].room)},
                     {event_id2,Sol(this->solution_set[event].period,this->solution_set[event_id2].room)}
                 };
             }
-            else if(this->is_room_available(this->solution_set[event_id2].room,this->solution_set[event_id2].period) && this->is_room_available(this->solution_set[event].room,this->solution_set[event].period))
+            else if(this->is_room_available(event,this->solution_set[event_id2].room,this->solution_set[event_id2].period,{event_id2}) && this->is_room_available(event_id2,this->solution_set[event].room,this->solution_set[event].period,{event}))
             {
                 return {
                     {event,Sol(this->solution_set[event_id2])},
@@ -202,7 +202,8 @@ map <int,Sol> Solution::swap_events(const int &event)
                 // Find suitable room for the first event
                 for(int room_id=0;room_id<this->problem->R;room_id++)
                 {
-                    if(this->is_room_available(room_id,moves[event].period))
+                    if(room_id==this->solution_set[event].room || room_id==this->solution_set[event_id2].room) continue;
+                    if(this->is_room_available(event,room_id,moves[event].period))
                     {
                         moves[event].room=room_id;
                         break;
@@ -212,12 +213,14 @@ map <int,Sol> Solution::swap_events(const int &event)
                 // Find suitable room for the second event
                 for(int room_id=0;room_id<this->problem->R;room_id++)
                 {
-                    if(this->is_room_available(room_id,moves[event_id2].period))
+                    if(room_id==this->solution_set[event].room || room_id==this->solution_set[event_id2].room) continue;
+                    if(this->is_room_available(event_id2,room_id,moves[event_id2].period))
                     {
                         moves[event_id2].room=room_id;
                         break;
                     }
                 }
+
                 if(moves[event].room!=-1 && moves[event_id2].room!=-1)
                 {
                     return moves;
@@ -244,8 +247,9 @@ map <int,Sol> Solution::kempe_chain(const int &event)
         valid_move=(find(this->problem->event_available_periods[event].begin(),this->problem->event_available_periods[event].end(),this->solution_set[event_id2].period)!=this->problem->event_available_periods[event].end()) && (find(this->problem->event_available_periods[event_id2].begin(),this->problem->event_available_periods[event_id2].end(),this->solution_set[event].period)!=this->problem->event_available_periods[event_id2].end());
         if(!valid_move) continue;
         
-        versus_periods.clear();
+        kc=queue<int>();
         connections.clear();
+        moves.clear();
 
         versus_periods={
             {this->solution_set[event].period,this->solution_set[event_id2].period},
@@ -286,13 +290,13 @@ map <int,Sol> Solution::kempe_chain(const int &event)
         for(auto &[event_id,sol_item]:moves)
         {
             // 1. Try to put the event in the same room
-            if(this->is_room_available(this->solution_set[event_id].room,sol_item.period))
+            if(this->is_room_available(event_id,this->solution_set[event_id].room,sol_item.period))
             {
                 sol_item.room=this->solution_set[event_id].room;
             }
 
             // 2. Try to place the event in its connection room
-            else if(this->is_room_available(this->solution_set[connections[event_id]].room,sol_item.period))
+            else if(this->is_room_available(event_id,this->solution_set[connections[event_id]].room,sol_item.period,{connections[event_id]}))
             {
                 sol_item.room=this->solution_set[connections[event_id]].room;
             }
@@ -305,7 +309,7 @@ map <int,Sol> Solution::kempe_chain(const int &event)
                     {
                         continue;
                     }
-                    if(this->is_room_available(room_id,sol_item.period))
+                    if(this->is_room_available(event_id,room_id,sol_item.period))
                     {
                         sol_item.room=room_id;
                     }
@@ -317,7 +321,6 @@ map <int,Sol> Solution::kempe_chain(const int &event)
                 return map <int,Sol>();
             }
         }
-
         return moves;
     }
     return map <int,Sol>();
@@ -341,7 +344,7 @@ map <int,Sol> Solution::kick(const int &event)
                     // Find suitable room for event 1
                     for(int room_id=0;room_id<this->problem->R;room_id++)
                     {
-                        if(this->is_room_available(room_id,potential_moves[event].period))
+                        if(this->is_room_available(event,room_id,potential_moves[event].period,{event_id2}))
                         {
                             potential_moves[event].room=room_id;
                             break;
@@ -352,7 +355,7 @@ map <int,Sol> Solution::kick(const int &event)
                     {
                         for(int room_id=0;room_id<this->problem->R;room_id++)
                         {
-                            if(this->is_room_available(room_id,potential_moves[event_id2].period))
+                            if(this->is_room_available(event_id2,room_id,potential_moves[event_id2].period))
                             {
                                 potential_moves[event_id2].room=room_id;
                                 break;
@@ -398,18 +401,72 @@ map <int,Sol> Solution::double_kick(const int &event)
                             };
 
                             // 1. Place the first event
+                            if(this->is_room_available(event,this->solution_set[event].room,moves[event].period))
+                            {
+                                moves[event].room=this->solution_set[event].room;
+                            }
+                            else if(this->is_room_available(event,this->solution_set[event_id2].room,moves[event].period,{event_id2}))
+                            {
+                                moves[event].room=this->solution_set[event_id2].room;
+                            }
+                            else{
+                                for(int room_id=0;room_id<this->problem->R;room_id++)
+                                {
+                                    if(room_id==this->solution_set[event].room || room_id==this->solution_set[event_id2].room) continue;
+                                    if(this->is_room_available(event,room_id,moves[event].period))
+                                    {
+                                        moves[event].room=room_id;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if(moves[event].room==-1) continue;
 
                             // 2. Place the second event
+                            if(this->is_room_available(event_id2,this->solution_set[event_id2].room,moves[event_id2].period))
+                            {
+                                moves[event_id2].room=this->solution_set[event_id2].room;
+                            }
+                            else if(this->is_room_available(event_id2,this->solution_set[event_id3].room,moves[event_id3].period,{event_id3}))
+                            {
+                                moves[event_id2].room=this->solution_set[event_id3].room;
+                            }
+                            else
+                            {
+                                for(int room_id=0;room_id<this->problem->R;room_id++)
+                                {
+                                    if(room_id==this->solution_set[event_id2].room || room_id==this->solution_set[event_id3].room) continue;
+                                    if(this->is_room_available(event,room_id,moves[event].period))
+                                    {
+                                        moves[event_id2].room=room_id;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if(moves[event_id2].room==-1) continue;
 
                             // 3. Place the third event
+                            for(int room_id=0;room_id<this->problem->R;room_id++)
+                            {
+                                if(this->is_room_available(event_id3,room_id,moves[event_id3].period,{event,event_id2}))
+                                {
+                                    moves[event_id3].period=room_id;
+                                    break;
+                                }
+                            }
 
+                            if(moves[event_id3].room==-1) continue;
 
+                            return moves;
                         }
                     }
                 }
             }
         }
     }
+    return map <int,Sol>();
 }
 
 bool Solution::can_be_moved(const int &event,const int &period,const vector <int> &excluded={})
@@ -426,11 +483,12 @@ bool Solution::can_be_moved(const int &event,const int &period,const vector <int
     return true;
 }
 
-bool Solution::is_room_available(const int &room_id,const int &period_id)
+bool Solution::is_room_available(const int &event_id,const int &room_id,const int &period_id,const vector <int> &excluded={})
 {
-
+    if(find(this->problem->event_available_periods[event_id].begin(),this->problem->event_available_periods[event_id].end(),period_id)==this->problem->event_available_periods[event_id].end()) return false;
     for(auto &event_id2:this->periodwise_solutions[period_id])
     {
+        if(find(excluded.begin(),excluded.end(),event_id2)!=excluded.end()) continue;
         if(this->solution_set[event_id2].room==room_id)
         {
             return false;
@@ -450,8 +508,33 @@ void Solution::reposition(map <int,Sol> &moves)
 {
     for(auto &[event_id,sol_item]:moves)
     {
-        this->memory[event_id]=sol_item;
+       this->reposition(event_id,sol_item.room,sol_item.period);
+    }
+}
+
+void Solution::set_solution(map <int,Sol> &candicate_solution)
+{
+    for(auto &[event_id,sol_item]:candicate_solution)
+    {
         this->unschedule(event_id);
         this->schedule(event_id,sol_item.room,sol_item.period);
     }
+}
+
+void Solution::save()
+{
+    fs::path filepath(".");
+    vector <string> path_road={"..","results",this->problem->get_id()+"_"+std::to_string(this->compute_cost())};
+    for(const string &x:path_road)
+    {
+        filepath.append(x);
+    }
+
+
+    fstream fp(filepath.string(),ios::out);
+    for(auto &[event_id,sol_item]:this->solution_set)
+    {
+        fp<<sol_item.period<<" "<<sol_item.room<<endl;
+    }
+    fp.close();
 }

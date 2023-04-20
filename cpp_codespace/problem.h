@@ -35,4 +35,7 @@ class Problem
         double average_room_suitability();
         double average_room_size();
         double precedence_density();
+
+        string get_id()const;
+
 };
