@@ -1,5 +1,5 @@
 #include "base.h"
-#include "stringops.hpp"
+#include "stringops.h"
 #include "graph.h"
 #include <random>
 #include <chrono>

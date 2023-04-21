@@ -1,4 +1,5 @@
 #include "solution.h"
+#include <cmath>
 
 class SimulatedAnnealing
 {
@@ -8,5 +9,5 @@ class SimulatedAnnealing
         SimulatedAnnealing(Solution &asolution);
         ~SimulatedAnnealing();
 
-        void solve();
+        void solve(int timesol);
 };

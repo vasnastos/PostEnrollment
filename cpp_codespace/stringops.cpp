@@ -1,4 +1,4 @@
-#include "stringops.hpp"
+#include "stringops.h"
 
 std::string ltrim(const std::string &s) {
     return std::regex_replace(s, std::regex("^\\s+"), std::string(""));

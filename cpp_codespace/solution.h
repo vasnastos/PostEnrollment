@@ -12,14 +12,15 @@ class Solution
 {
     private:
         Problem *problem;
-        map <int,Sol> solution_set;
         map <int,vector <int>> periodwise_solutions;
         map <int,vector <int>> roomwise_solutions;
         map <int,Sol> memory;
 
         uniform_int_distribution <int> rand_event;
-        mt19937 mt;
     public:
+        mt19937 mt;
+        map <int,Sol> solution_set;
+
         Solution(string filename);
         ~Solution();
 
@@ -42,6 +43,8 @@ class Solution
         map <int,Sol> kempe_chain(const int &event);
         map <int,Sol> kick(const int &event);
         map <int,Sol> double_kick(const int &event);
+
+        map <int,Sol> select_operator(string &move_name);
 
         void save();
 };

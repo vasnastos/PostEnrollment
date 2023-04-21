@@ -11,7 +11,7 @@ void Graph::add_node(int node)
     this->nodes.emplace_back(node);
 }
 
-void Graph::add_edge(int n1,int n2,int weight=-1)
+void Graph::add_edge(int n1,int n2,int weight)
 {
     if(this->graph_map.find(n1)!=this->graph_map.end() || this->graph_map.find(n2)!=this->graph_map.end())
     {

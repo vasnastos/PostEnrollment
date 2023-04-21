@@ -512,12 +512,55 @@ void Solution::reposition(map <int,Sol> &moves)
     }
 }
 
+void Solution::rollback()
+{
+    for(auto &[event_id,sol_item]:this->memory)
+    {
+        this->unschedule(event_id);
+        this->schedule(event_id,sol_item.room,sol_item.period);
+    }
+    this->memory.clear();
+}
+
 void Solution::set_solution(map <int,Sol> &candicate_solution)
 {
     for(auto &[event_id,sol_item]:candicate_solution)
     {
         this->unschedule(event_id);
         this->schedule(event_id,sol_item.room,sol_item.period);
+    }
+}
+
+map <int,Sol> Solution::select_operator(string &move_name)
+{
+    uniform_int_distribution <int> movernd(1,5);
+    int randmove=movernd(mt);
+    int event=this->rand_event(mt);
+
+    if(randmove==1)
+    {
+        move_name="Transfer";
+        return this->transfer_event(event);
+    }
+    else if(randmove==2)
+    {
+        move_name="Swap";
+        return this->swap_events(event);
+    }
+    else if(randmove==3)
+    {
+        move_name="Kempe";
+        return this->kempe_chain(event);
+    }
+    else if(randmove==4)
+    {
+        move_name="Kick";
+        return this->kick(event);
+    }
+    else
+    {
+        move_name="Double Kick";
+        return this->double_kick(event);
     }
 }
 
