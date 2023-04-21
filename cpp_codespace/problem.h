@@ -7,7 +7,6 @@
 using namespace std;
 using namespace std::chrono;
 
-
 class Problem
 {
     private:
@@ -37,5 +36,5 @@ class Problem
         double precedence_density();
 
         string get_id()const;
-
+        void statistics();
 };

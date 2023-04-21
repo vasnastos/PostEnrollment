@@ -1,9 +1,18 @@
 #include "problem.h"
 
-Problem::Problem() {}
+Problem::Problem() {
+    PRF::get_instance()->load();
+}
+
+Problem::~Problem()
+{
+    PRF::get_instance()->flush();
+}
 
 void Problem::read(string filename)
 {
+    // Find path to file
+
     string line,word;
     vector <string> first_line_data;
     
@@ -107,19 +116,18 @@ void Problem::read(string filename)
     fp.close();
 
     // Create event-event relations based on common students
-    set <int> common_students;
-    
+
     for(int e1=0;e1<this->E;e1++)
     {
         this->G.add_node(e1);
         for(int e2=e1+1;e2<this->E;e2++)
         {
-            std::set_intersection(this->events[e1].students.begin(),this->events[e1].students.end(),this->events[e2].students.begin(),this->events[e2].students.end(),common_students.begin());
+            set <int> common_students;
+            std::set_intersection(this->events[e1].students.begin(),this->events[e1].students.end(),this->events[e2].students.begin(),this->events[e2].students.end(),std::inserter(common_students,common_students.begin()));
             if(common_students.size()>0)
             {
                 this->G.add_edge(e1,e2,common_students.size());
             }
-            common_students.clear();
         }
     }
 
@@ -143,6 +151,7 @@ void Problem::read(string filename)
 
 double Problem::density()
 {
+    // 2n/n(n-1)
     return 2*this->G.number_of_edges()/this->G.number_of_nodes()*(this->G.number_of_nodes()-1);
 }
 
@@ -159,10 +168,29 @@ double Problem::average_room_size()
 
 double Problem::precedence_density()
 {
-    
+    if(PRF::get_instance()->has_precedence_relation(this->id)) return 0.0;
+    // return 2*accumulate(this->events.begin(),this->events.end(),0,[&](double &s,const Event &e) {return s+e.precedence_events.size();})/this->E*(this->E-1); Graph density
+    return accumulate(this->events.begin(),this->events.end(),0.0,[&](const double &s,const Event &e) {return s+e.precedence_events.size();})/this->E;
 }
 
 string Problem::get_id()const
 {
     return this->id;
+}
+
+void Problem::statistics()
+{
+    cout<<"Problem:"<<this->id<<endl;
+    cout<<"Events:"<<this->E<<endl;
+    cout<<"Rooms:"<<this->R<<endl;
+    cout<<"Features:"<<this->F<<endl;
+    cout<<"Students:"<<this->S<<endl;
+
+    cout<<"Statistics"<<endl;
+    cout<<"Density:"<<this->density()<<endl;
+    cout<<"Average Room Suitability:"<<this->average_room_suitability()<<endl;
+    cout<<"Average Room Size:"<<this->average_room_size()<<endl;
+    cout<<"Precedence Density:"<<this->precedence_density()<<endl;
+
+    cout<<endl<<endl;
 }

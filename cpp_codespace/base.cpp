@@ -21,7 +21,7 @@ Instance::Instance(string n,string f):name(n) {
 }
 
 string PRF::path_to_form="";
-PRF PRF::*_instance=nullptr;
+PRF* PRF::_instance=nullptr;
 
 PRF::PRF()
 {
