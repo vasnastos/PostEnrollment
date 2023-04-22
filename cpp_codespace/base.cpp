@@ -20,6 +20,28 @@ Instance::Instance(string n,string f):name(n) {
 
 }
 
+string Instance::get_formulation()const
+{
+    switch (this->formulation)
+    {
+    case Formulation::ITC2007:
+        return "ITC2007";
+        break;
+    case Formulation::TTCOMP2002:
+        return "ITC2002";
+        break;
+    case Formulation::MetaheuristicsNetwork:
+        return "MetaheuristicsNetwork";
+        break;
+    case Formulation::HarderLewisPaechter:
+        return "HarderLewisPaechter";
+        break;
+    default:
+        return "UNFORMULATED";
+        break;
+    }
+}
+
 string PRF::path_to_form="";
 PRF* PRF::_instance=nullptr;
 
@@ -54,18 +76,25 @@ void PRF::set_path(const vector <string> &components)
 
 void PRF::load()
 {
+    if(!this->instances.empty()) return;
     string line,word;
     fstream fp(PRF::path_to_form);
     vector <string> fdata;
+    bool start_line=true;
     while(getline(fp,line))
     {
+        if(start_line)
+        {
+            start_line=false;
+            continue;
+        }
         fdata.clear();
         stringstream ss(line);
         while(getline(ss,word,','))
         {
             fdata.emplace_back(word);
         }
-        this->instances.emplace_back(Instance(fdata[0],fdata[2]));
+        this->instances.emplace_back(Instance(replaceString(fdata[0],".tim",""),fdata[2]));
     }
     fp.close();
 }
@@ -84,6 +113,15 @@ bool PRF::has_precedence_relation(string dataset_id)
         return false;
     }
     return data_itr->formulation==Formulation::ITC2007;
+}
+
+void PRF::print()
+{
+    cout<<"=== Datasets ==="<<endl;
+    for(const auto &x:this->instances)
+    {
+        cout<<x.name<<" "<<x.get_formulation()<<endl;
+    }
 }
 
 Formulation PRF::get_formulation(string dataset_id)

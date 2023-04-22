@@ -9,6 +9,7 @@
 #include <numeric>
 #include <queue>
 #include <filesystem>
+#include "stringops.h"
 
 
 using namespace std;
@@ -41,6 +42,7 @@ struct Instance
     string name;
     Formulation formulation;
     Instance(string n,string f);
+    string get_formulation()const;
 };
 
 class PRF
@@ -51,13 +53,14 @@ class PRF
         static string path_to_form;
         static PRF *_instance;
         static void set_path(const vector <string> &components);
+        static PRF* get_instance();
 
         PRF();
         ~PRF();
 
-        static PRF* get_instance();
-        static void  flush();
+        void  flush();
         void load();
+        void print();
         bool has_precedence_relation(string dataset_id);
         Formulation get_formulation(string dataset_id);
 };

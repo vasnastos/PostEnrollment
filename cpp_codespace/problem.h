@@ -1,5 +1,4 @@
 #include "base.h"
-#include "stringops.h"
 #include "graph.h"
 #include <random>
 #include <chrono>
@@ -28,7 +27,9 @@ class Problem
         map <int,vector <int>> event_available_rooms;
         Graph G;
 
-        Problem();
+        static string path_to_datasets;
+        static void change_datasets_path(const vector <string> &path_components);
+
         void read(string filename);
         double density();
         double average_room_suitability();
