@@ -157,11 +157,14 @@ double Problem::density()
 {
     // 2n/n(n-1) Graph density
     return 2.0*this->G.number_of_edges()/(this->G.number_of_nodes()*(this->G.number_of_nodes()-1));
+
+    // Calculate density based on the general type
+    // return this->G.number_of_edges()/this->G.number_of_nodes();
 }
 
 double Problem::average_room_suitability()
 {
-    return static_cast<double>(accumulate(this->event_available_rooms.begin(),this->event_available_rooms.end(),0,[&](int s,const pair <int,vector <int>> &pav) {return s+pav.second.size();}))/(this->E*this->R);
+    return static_cast<double>(accumulate(this->event_available_rooms.begin(),this->event_available_rooms.end(),0,[&](int s,const pair <int,vector <int>> &pav) {return s+pav.second.size();}))/(this->E);
 }
 
 double Problem::average_room_size()
@@ -209,4 +212,9 @@ void Problem::change_datasets_path(const vector <string> &path_components)
         fpds.append(x);
     }
     Problem::path_to_datasets=fpds.string();
+}
+
+int Problem::clashe(const int &event_id)
+{
+    return this->G.neighbors(event_id).size();
 }

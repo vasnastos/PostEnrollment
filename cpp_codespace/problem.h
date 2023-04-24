@@ -38,4 +38,8 @@ class Problem
 
         string get_id()const;
         void statistics();
+
+        // methods for tabu search
+        int clashe(const int &event_id);
+        int clashsum();
 };

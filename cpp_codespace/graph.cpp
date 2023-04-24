@@ -44,10 +44,6 @@ int Graph::get_weight(int n1,int n2)
             {
                 return vertex->weight;
             }
-            else
-            {
-                throw NotFoundException();
-            }
         }
         else
             throw NotFoundException();
