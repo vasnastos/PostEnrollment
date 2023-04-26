@@ -10,4 +10,5 @@ class SimulatedAnnealing
         ~SimulatedAnnealing();
 
         void solve(int timesol);
+        void SAR();
 };

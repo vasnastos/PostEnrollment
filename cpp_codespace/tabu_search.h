@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iostream>
 #include <vector>
+#include "hopcroft_karp.h"
 
 class TabuInit
 {
@@ -27,7 +28,8 @@ class TabuInit
         
         void perturb();
         void tssp(int timesol);
-
+        void set_room_solution(map <int,int> &rsol);
+        
         // Room assignment
         void maximal_room_matching();
         void match(const int &event_id);

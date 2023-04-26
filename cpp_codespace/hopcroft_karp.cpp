@@ -14,6 +14,7 @@ BipGraph::BipGraph(Problem *p,map <int,int> &potential_period_solutions):problem
     this->pair_event.resize(this->events.size());
     this->pair_room.resize(this->problem->R);
 
+
     fill(this->pair_event.begin(),this->pair_event.end(),NIL);
     fill(this->pair_room.begin(),this->pair_room.end(),NIL);
 
@@ -31,7 +32,6 @@ bool BipGraph::dfs(const int &event_id)
             {
                 if(this->dfs(this->pair_room[room_id-(this->events.size()+1)]))
                 {
-                    
                     this->pair_room[room_id-(this->events.size()+1)]=event_id;
                     this->pair_event[event_id]=room_id;
                     return true;

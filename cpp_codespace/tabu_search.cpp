@@ -92,7 +92,7 @@ bool TabuInit::tabu(const int &event_id)
 
 void TabuInit::perturb()
 {
-
+    
 }
 
 void TabuInit::tssp(int timesol) 
@@ -191,17 +191,35 @@ void TabuInit::tssp(int timesol)
             this->perturb();
             tabu_list.clear();
         }
+        if(i%(this->problem->R*2)==0) // Possible hyperparemeter
+        {
+            BipGraph bg(this->problem,this->period_solution);
+            cout<<"Maximum number of events placed in rooms:"<<bg.hocroft_karp()<<endl;
+            this->set_room_solution(bg.get_solution());
+        }
         i++;
     }
 }
 
 
-void TabuInit::maximal_room_matching()
+void TabuInit::set_room_solution(map <int,int> &rsol)
 {
-    // O(mn)
-    vector <bool> seen;
-    vector <int> matchR;
+    vector <int> unset;
+    for(auto &[event_id,period]:this->period_solution)
+    {
+        if(rsol.find(event_id)!=rsol.end())
+        {
+            this->room_solution[event_id]=rsol[event_id];
+        }
+        else
+        {
+            unset.emplace_back(event_id);
+        }
+    }
 
-    
-
+    for(auto &event_id:unset)
+    {
+        this->period_solution.erase(this->period_solution.find(event_id));
+        this->unplaced.emplace_back(event_id);
+    }
 }
