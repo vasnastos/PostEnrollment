@@ -35,5 +35,6 @@ class TabuInit
         void match(const int &event_id);
 
         // Operators for room sol
+        map <int,Sol> transfer_event(const int &event);
 
 };

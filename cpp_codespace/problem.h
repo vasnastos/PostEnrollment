@@ -1,3 +1,4 @@
+#pragma once
 #include "base.h"
 #include "graph.h"
 #include <random>
@@ -5,6 +6,14 @@
 
 using namespace std;
 using namespace std::chrono;
+
+struct Sol
+{
+    int period;
+    int room;
+    Sol(int p_,int r_);
+    Sol(const Sol &sln);
+};
 
 class Problem
 {

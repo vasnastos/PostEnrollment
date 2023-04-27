@@ -1,9 +1,5 @@
 #include "solution.h"
 
-Sol::Sol(int p_,int r_):period(p_),room(r_) {}
-
-Sol::Sol(const Sol &sln):period(sln.period),room(sln.room) {}
-
 Solution::Solution(string filename)
 {
     this->problem=new Problem;
@@ -15,6 +11,12 @@ Solution::Solution(string filename)
 Solution::~Solution()
 {
     delete this->problem;
+}
+
+
+Problem* Solution::get_problem()
+{
+    return this->problem;
 }
 
 int Solution::schedule(const int &event_id,const int &room_id,const int &period_id)
@@ -147,6 +149,24 @@ int Solution::compute_daily_cost(int day)
     }
     return daily_cost;
 }
+
+void Solution::set_tournment_size(const int &size)
+{
+    this->tournment_size=size;
+}
+
+int Solution::get_tournament_size()const
+{
+    return this->tournment_size;
+}
+
+int Solution::tournament_selection()
+{
+    // Adapt tournment selectionat moves selection
+    // 1. We can tryu tournment selection based on the move ratio show
+    // 2. Or based on the neighbors score
+}
+
 
 map <int,Sol> Solution::transfer_event(const int &event)
 {

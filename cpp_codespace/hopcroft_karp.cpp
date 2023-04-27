@@ -74,7 +74,7 @@ bool BipGraph::bfs()
                 {
                     if(this->can_be_moved(event_id,room_id))
                     {
-                        this->dist[this->pair_room[room_id-this->events.size()]]=this->dist[event_id]+1;
+                        this->dist[this->pair_room[room_id]]=this->dist[event_id]+1;
                         q.push(this->dist[this->pair_room[room_id-(this->events.size()+1)]]);
                     }
                 }

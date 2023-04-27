@@ -1,7 +1,17 @@
 #include "simulated_annealing.h"
 
 SimulatedAnnealing::SimulatedAnnealing(Solution &asolution):solution(&asolution) {}
+
 SimulatedAnnealing::~SimulatedAnnealing() {}
+
+void SimulatedAnnealing::preprocessing()
+{
+    cout<<"Construct Initial Solution using Tabu Search"<<endl;
+    cout<<"=================================="<<endl;
+    TabuInit ts(this->solution->get_problem());
+    ts.tssp(600);
+    cout<<endl<<endl;
+}
 
 void SimulatedAnnealing::solve(int timesol)
 {
@@ -17,10 +27,9 @@ void SimulatedAnnealing::solve(int timesol)
     double freeze_temp=1.0;
     uniform_real_distribution<double> metropolis(0,1);
     
+    this->preprocessing();
     
     auto start_timer=high_resolution_clock::now();
-    
-
     while(true)
     {
         moves=this->solution->select_operator(move_name);

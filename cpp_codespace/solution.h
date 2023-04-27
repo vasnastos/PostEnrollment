@@ -1,12 +1,5 @@
+#pragma once
 #include "problem.h"
-
-struct Sol
-{
-    int period;
-    int room;
-    Sol(int p_,int r_);
-    Sol(const Sol &sln);
-};
 
 class Solution
 {
@@ -17,12 +10,17 @@ class Solution
         map <int,Sol> memory;
 
         uniform_int_distribution <int> rand_event;
+
+        int tournment_size;
+
     public:
         mt19937 mt;
         map <int,Sol> solution_set;
 
         Solution(string filename);
         ~Solution();
+
+        Problem* get_problem();
 
         int schedule(const int &event_id,const int &room_id,const int &period_id);
         int unschedule(const int &event_id);
@@ -38,6 +36,11 @@ class Solution
         void rollback();
         void set_solution(map <int,Sol> &candicate_solution);
 
+        void set_tournment_size(const int &size);
+        int get_tournament_size()const;
+
+        // Operators
+        int tournament_selection();
         map <int,Sol> transfer_event(const int &event);
         map <int,Sol> swap_events(const int &event);
         map <int,Sol> kempe_chain(const int &event);
