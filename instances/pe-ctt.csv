@@ -1,0 +1,117 @@
+instance,problem,category,events,rooms,features,students,periods,formulation,average_suitable_rooms_per_event,average_room_size,precedence_density,average_event_period_unavailability,best_solution
+o01.tim,PE-CTT,TTCOMP-2002,400,10,10,200,45,full,1.9625,10.4,0,0,
+o02.tim,PE-CTT,TTCOMP-2002,400,10,10,200,45,full,1.9175,10.4,0,0,14
+o03.tim,PE-CTT,TTCOMP-2002,400,10,10,200,45,full,3.42,10.8,0,0,36
+o04.tim,PE-CTT,TTCOMP-2002,400,10,5,300,45,full,2.4475,15.3,0,0,76
+o05.tim,PE-CTT,TTCOMP-2002,350,10,10,300,45,full,1.78285714285714,17.3,0,0,56
+o06.tim,PE-CTT,TTCOMP-2002,350,10,5,300,45,full,3.58571428571429,17.9,0,0,1
+o07.tim,PE-CTT,TTCOMP-2002,350,10,5,350,45,full,2.87428571428571,20.6,0,0,2
+o08.tim,PE-CTT,TTCOMP-2002,400,10,5,250,45,full,2.9275,12.8,0,0,6
+o09.tim,PE-CTT,TTCOMP-2002,440,11,6,220,45,full,2.575,10.3636363636364,0,0,8
+o10.tim,PE-CTT,TTCOMP-2002,400,10,5,200,45,full,3.49,10.7,0,0,41
+o11.tim,PE-CTT,TTCOMP-2002,400,10,6,220,45,full,2.065,11.4,0,0,19
+o12.tim,PE-CTT,TTCOMP-2002,400,10,5,200,45,full,1.955,10.3,0,0,
+o13.tim,PE-CTT,TTCOMP-2002,400,10,6,250,45,full,2.43,12.6,0,0,51
+o14.tim,PE-CTT,TTCOMP-2002,350,10,5,350,45,full,3.07714285714286,20.3,0,0,13
+o15.tim,PE-CTT,TTCOMP-2002,350,10,10,300,45,full,2.19142857142857,17.4,0,0,3
+o16.tim,PE-CTT,TTCOMP-2002,440,11,6,220,45,full,3.175,10.7272727272727,0,0,4
+o17.tim,PE-CTT,TTCOMP-2002,350,10,10,300,45,full,1.10571428571429,17.2,0,0,35
+o18.tim,PE-CTT,TTCOMP-2002,400,10,10,200,45,full,1.75,10.5,0,0,11
+o19.tim,PE-CTT,TTCOMP-2002,400,10,5,300,45,full,3.9425,15.3,0,0,46
+o20.tim,PE-CTT,TTCOMP-2002,350,10,5,300,45,full,3.43142857142857,17.5,0,0,0
+i01.tim,PE-CTT,ITC-2007,400,10,10,500,45,full,4.0775,37.7,0.000250001562509766,0.439722222222222,0
+i02.tim,PE-CTT,ITC-2007,400,10,10,500,45,full,3.9475,36.1,0.000225001406258789,0.432055555555556,0
+i03.tim,PE-CTT,ITC-2007,200,20,10,1000,45,full,5.045,86.6,0.000500012500312508,0.435333333333333,31
+i04.tim,PE-CTT,ITC-2007,200,20,10,1000,45,full,6.4,89.15,0.000525013125328133,0.433111111111111,21
+i05.tim,PE-CTT,ITC-2007,400,20,20,300,45,full,6.805,21.55,0.000912505703160645,0.444277777777778,0
+i06.tim,PE-CTT,ITC-2007,400,20,20,300,45,full,5.065,21.8,0.000868755429721436,0.445,0
+i07.tim,PE-CTT,ITC-2007,200,20,20,500,45,full,1.575,42,0.000500012500312508,0.605888888888889,0
+i08.tim,PE-CTT,ITC-2007,200,20,20,500,45,full,1.915,44.5,0.000525013125328133,0.620666666666667,0
+i09.tim,PE-CTT,ITC-2007,400,10,20,500,45,full,2.9125,37.9,0.000275001718760742,0.438833333333333,0
+i10.tim,PE-CTT,ITC-2007,400,10,20,500,45,full,3.2025,36.3,0.000262501640635254,0.437166666666667,0
+i11.tim,PE-CTT,ITC-2007,200,10,10,1000,45,full,3.375,84.1,0.000525013125328133,0.440333333333333,39
+i12.tim,PE-CTT,ITC-2007,200,10,10,1000,45,full,3.355,84.1,0.000500012500312508,0.432555555555556,0
+i13.tim,PE-CTT,ITC-2007,400,20,10,300,45,full,8.6825,22.1,0.000850005312533203,0.437555555555556,0
+i14.tim,PE-CTT,ITC-2007,400,20,10,300,45,full,7.5625,22.25,0.000900005625035157,0.444388888888889,0
+i15.tim,PE-CTT,ITC-2007,200,10,20,500,45,full,2.23,44,0.000525013125328133,0.616888888888889,0
+i16.tim,PE-CTT,ITC-2007,200,10,20,500,45,full,1.74,43.9,0.000550013750343759,0.612222222222222,0
+i17.tim,PE-CTT,ITC-2007,100,10,10,500,45,full,2.77,138.2,0.0012001200120012,0.431777777777778,0
+i18.tim,PE-CTT,ITC-2007,200,10,10,500,45,full,3.475,70.4,0.000500012500312508,0.432555555555556,0
+i19.tim,PE-CTT,ITC-2007,300,10,10,1000,45,full,3.65666666666667,56.3,0.000344448271647463,0.44,0
+i20.tim,PE-CTT,ITC-2007,400,10,10,1000,45,full,3.7325,44.8,0.000250001562509766,0.439722222222222,543
+i21.tim,PE-CTT,ITC-2007,500,20,20,300,45,full,7.358,17.4,0.00072000288001152,0.433111111111111,5
+i22.tim,PE-CTT,ITC-2007,600,20,20,500,45,full,5.64666666666667,24.85,0.000644446234572874,0.442925925925926,5
+i23.tim,PE-CTT,ITC-2007,400,20,30,1000,45,full,2.89,68.65,0.000300001875011719,0.219111111111111,1292
+i24.tim,PE-CTT,ITC-2007,400,20,30,1000,45,full,1.59,42.65,0.00180626128913306,0.454888888888889,0
+big_1.tim,PE-CTT,Harder-(Lewis and Paechter),1000,28,20,1000,45,original,1.624,20.75,,,3567
+big_10.tim,PE-CTT,Harder-(Lewis and Paechter),1075,25,20,1000,45,original,1.85674418604651,22.08,,,5233
+big_11.tim,PE-CTT,Harder-(Lewis and Paechter),1075,25,20,1000,45,original,1.42604651162791,21.6,,,5244
+big_12.tim,PE-CTT,Harder-(Lewis and Paechter),1000,26,25,1000,45,original,2.145,24.4230769230769,,,4474
+big_13.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,25,1000,45,original,2.633,25.6,,,4828
+big_14.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,25,1000,45,original,2.066,25.04,,,4717
+big_15.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,25,1000,45,original,1.794,35.96,,,7934
+big_16.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,10,1000,45,original,4.9,33.04,,,6966
+big_17.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,10,1200,45,original,5.514,41.16,,,
+big_18.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,10,1000,45,original,3.867,34.64,,,
+big_19.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,10,1000,45,original,3.48,32.96,,,
+big_2.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,20,1000,45,original,1.389,23.2,,,3968
+big_20.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,10,1000,45,original,2.695,34.44,,,
+big_3.tim,PE-CTT,Harder-(Lewis and Paechter),1000,25,20,900,45,original,1.619,20.88,,,3729
+big_4.tim,PE-CTT,Harder-(Lewis and Paechter),1050,25,20,800,45,original,2.03809523809524,17.76,,,4010
+big_5.tim,PE-CTT,Harder-(Lewis and Paechter),1075,25,20,1000,45,original,1.53674418604651,21.44,,,5134
+big_6.tim,PE-CTT,Harder-(Lewis and Paechter),1075,25,20,1000,45,original,1.38697674418605,23.84,,,6409
+big_7.tim,PE-CTT,Harder-(Lewis and Paechter),1050,25,20,1100,45,original,1.14476190476191,29.16,,,
+big_8.tim,PE-CTT,Harder-(Lewis and Paechter),1025,25,20,1000,45,original,1.75219512195122,21.64,,,5235
+big_9.tim,PE-CTT,Harder-(Lewis and Paechter),1050,25,20,800,45,original,2.22,18.16,,,4132
+med_1.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,10,400,45,original,1.3925,23.7,,,1652
+med_10.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,500,45,original,5.05,29.9,,,2064
+med_11.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,800,45,original,4.45,47.5,,,3325
+med_12.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,800,45,original,3.43,52.3,,,4369
+med_13.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,800,45,original,4.175,51.1,,,5750
+med_14.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,1000,45,original,4.87,61.1,,,4114
+med_15.tim,PE-CTT,Harder-(Lewis and Paechter),425,10,8,500,45,original,4.76235294117647,28.4,,,2723
+med_16.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,1000,45,original,5.18,80.8,,,10954
+med_17.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,800,45,original,4.0375,67.3,,,6332
+med_18.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,8,1000,45,original,4.64,93,,,13324
+med_19.tim,PE-CTT,Harder-(Lewis and Paechter),410,10,8,1000,45,original,4.35853658536585,86.5,,,12493
+med_2.tim,PE-CTT,Harder-(Lewis and Paechter),390,10,10,400,45,original,1.70512820512821,23.1,,,1652
+med_20.tim,PE-CTT,Harder-(Lewis and Paechter),410,10,8,1000,45,original,3.58292682926829,83.5,,,13707
+med_3.tim,PE-CTT,Harder-(Lewis and Paechter),390,10,10,400,45,original,1.38974358974359,23.2,,,2144
+med_4.tim,PE-CTT,Harder-(Lewis and Paechter),410,10,9,400,45,original,1.95121951219512,23.1,,,2069
+med_5.tim,PE-CTT,Harder-(Lewis and Paechter),410,10,9,450,45,original,1.88780487804878,25.5,,,2489
+med_6.tim,PE-CTT,Harder-(Lewis and Paechter),410,11,10,450,45,original,1.45609756097561,32.3636363636364,,,2675
+med_7.tim,PE-CTT,Harder-(Lewis and Paechter),410,11,10,450,45,original,1.46585365853659,32.6363636363636,,,3900
+med_8.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,10,400,45,original,1.905,30.9,,,2611
+med_9.tim,PE-CTT,Harder-(Lewis and Paechter),400,10,10,400,45,original,1.2,30.8,,,4092
+small_1.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,5,200,45,original,2.65,25,,,
+small_10.tim,PE-CTT,Harder-(Lewis and Paechter),220,5,10,1000,45,original,1.74090909090909,129.4,,,
+small_11.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,4,1000,45,original,2.09,98.6,,,
+small_12.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,10,1000,45,original,1.44444444444444,66,,,
+small_13.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,10,1000,45,original,1.71555555555556,104.4,,,
+small_14.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,3,1000,45,original,3.44444444444445,104,,,
+small_15.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,3,900,45,original,2.99,126.2,,,
+small_16.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,3,900,45,original,3.12,134.4,,,
+small_17.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,3,900,45,original,2.79,161.4,,,
+small_18.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,3,1000,45,original,2.46666666666667,133,,,
+small_19.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,3,1000,45,original,3.34666666666667,154.4,,,
+small_2.tim,PE-CTT,Harder-(Lewis and Paechter),210,6,5,400,45,original,2.78095238095238,52,,,
+small_20.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,3,1000,45,original,2.54222222222222,92.4,,,
+small_3.tim,PE-CTT,Harder-(Lewis and Paechter),200,6,5,400,45,original,3.265,59.6666666666667,,,
+small_4.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,8,500,45,original,2.395,65.8,,,
+small_5.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,8,500,45,original,2.305,55.8,,,
+small_6.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,3,1000,45,original,2.475,84.4,,,
+small_7.tim,PE-CTT,Harder-(Lewis and Paechter),200,5,3,800,45,original,1.81,89.8,,,
+small_8.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,10,1000,45,original,1.93333333333333,109.8,,,
+small_9.tim,PE-CTT,Harder-(Lewis and Paechter),225,5,10,900,45,original,2.40888888888889,106.8,,,
+easy01.tim,PE-CTT,Metaheuristics Network,100,5,5,80,45,original,1.65,8,,,0
+easy02.tim,PE-CTT,Metaheuristics Network,100,5,5,80,45,original,1.59,8.8,,,0
+easy03.tim,PE-CTT,Metaheuristics Network,100,5,5,80,45,original,2.01,8.8,,,0
+easy04.tim,PE-CTT,Metaheuristics Network,100,5,5,80,45,original,2.78,7,,,0
+easy05.tim,PE-CTT,Metaheuristics Network,100,5,5,80,45,original,2.35,11.4,,,0
+hard01.tim,PE-CTT,Metaheuristics Network,400,10,10,400,45,original,1.5275,20.4,,,190
+hard02.tim,PE-CTT,Metaheuristics Network,400,10,10,400,45,original,1.69,20.6,,,133
+medium01.tim,PE-CTT,Metaheuristics Network,400,10,5,200,45,original,4.47,10.4,,,9
+medium02.tim,PE-CTT,Metaheuristics Network,400,10,5,200,45,original,3.825,10.4,,,8
+medium03.tim,PE-CTT,Metaheuristics Network,400,10,5,200,45,original,3.825,10.4,,,30
+medium04.tim,PE-CTT,Metaheuristics Network,400,10,5,200,45,original,3.775,10.8,,,10
+medium05.tim,PE-CTT,Metaheuristics Network,400,10,5,200,45,original,2.7475,10,,,1

@@ -2,30 +2,9 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include "base.h"
 
 using namespace std;
-
-struct Vertex
-{
-    int neighbor;
-    double weight;
-    Vertex(int n2,double w);
-};
-
-struct Edge
-{
-    int node1;
-    int node2;
-    Edge(int n1,int n2);
-};
-
-
-class NotFoundException : public std::exception {
-public:
-    const char* what() const noexcept override {
-        return "Element not found";
-    }
-};
 
 
 class Graph

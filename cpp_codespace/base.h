@@ -64,3 +64,33 @@ class PRF
         bool has_precedence_relation(string dataset_id);
         Formulation get_formulation(string dataset_id);
 };
+
+struct Sol
+{
+    int period;
+    int room;
+    Sol(int p_,int r_);
+    Sol(const Sol &sln);
+};
+
+struct Vertex
+{
+    int neighbor;
+    double weight;
+    Vertex(int n2,double w);
+};
+
+struct Edge
+{
+    int node1;
+    int node2;
+    Edge(int n1,int n2);
+};
+
+
+class NotFoundException : public std::exception {
+public:
+    const char* what() const noexcept override {
+        return "Element not found";
+    }
+};

@@ -245,8 +245,3 @@ int Problem::clashe(const int& event_id)
 {
     return this->G.neighbors(event_id).size();
 }
-
-
-Sol::Sol(int p_,int r_):period(p_),room(r_) {}
-
-Sol::Sol(const Sol &sln):period(sln.period),room(sln.room) {}

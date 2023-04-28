@@ -135,3 +135,11 @@ Formulation PRF::get_formulation(string dataset_id)
     return data_itr->formulation;
 }
 
+Sol::Sol(int p_,int r_):period(p_),room(r_) {}
+
+Sol::Sol(const Sol &sln):period(sln.period),room(sln.room) {}
+
+Vertex::Vertex(int n2,double w):neighbor(n2),weight(w)  {}
+
+Edge:: Edge(int n1,int n2):node1(n1),node2(n2) {}
+

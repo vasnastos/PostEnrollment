@@ -193,9 +193,9 @@ void TabuInit::tssp(int timesol)
         }
         if(i%(this->problem->R*2)==0) // Possible hyperparemeter
         {
-            BipGraph bg(this->problem,this->period_solution);
-            cout<<"Maximum number of events placed in rooms:"<<bg.hocroft_karp()<<endl;
-            this->set_room_solution(bg.get_solution());
+            // BipGraph bg(this->problem,this->period_solution);
+            // cout<<"Maximum number of events placed in rooms:"<<bg.hocroft_karp()<<endl;
+            // this->set_room_solution(bg.get_solution());
         }
         i++;
     }

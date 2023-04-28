@@ -1,9 +1,5 @@
 #include "graph.h"
 
-Vertex::Vertex(int n2,double w):neighbor(n2),weight(w)  {}
-
-Edge:: Edge(int n1,int n2):node1(n1),node2(n2) {}
-
 Graph::Graph() {}
 
 void Graph::add_node(int node)
