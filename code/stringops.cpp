@@ -1,4 +1,4 @@
-#include "stringops.h"
+#include "stringops.hpp"
 
 std::string ltrim(const std::string &s) {
     return std::regex_replace(s, std::regex("^\\s+"), std::string(""));
@@ -37,4 +37,11 @@ void removeFileExtension(std::string &id)
             break;
         }
     }
+}
+
+bool endsWith(const std::string& str, const std::string& suffix) {
+    if (str.length() < suffix.length()) {
+        return false;
+    }
+    return str.substr(str.length() - suffix.length()) == suffix;
 }

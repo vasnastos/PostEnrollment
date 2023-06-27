@@ -1,0 +1,5 @@
+1. Εκτέλεση project(Διαθέσιμο σε ReadMe)
+2. Υλοποιήση Kempe Chain, Double Kempe Chain
+3. Batch Επίλυση προβλημάτων + εξαγωγή στατιστικών
+4. Σύγκριση αρχικών λυσεων(Construtive vs MIP vs cpsat)
+5. Ανάγνωση του GOH 2017
