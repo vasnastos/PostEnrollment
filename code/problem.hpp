@@ -1,6 +1,7 @@
 #include "indatabase.hpp"
 #include "graph.hpp"
 #include <set>
+#include <numeric>
 
 using namespace std;
 using namespace std::chrono;
@@ -16,6 +17,8 @@ struct Event
 {
     set <int> features;
     set <int> students;
+
+    int no_students();
 };
 
 struct Room
@@ -30,18 +33,17 @@ class Problem
 {
     private:
         string id;
-        vector <Event> events;
-        vector <Room> rooms;
-        map <int,vector <int>> students;
-        Graph G;
-
     public:
         // public properties
+        Graph G;
+        vector <Event> events;
+        vector <Room> rooms;
         int E,S,R,F;
         int P;
         int days;
         int periods_per_day;
 
+        map <int,vector <int>> students;
         map <int,vector <int>> event_available_periods;
         map <int,vector <int>> event_available_rooms;
         map <int,vector<int>> precedence_events;
@@ -59,6 +61,11 @@ class Problem
         string get_id()const;
 
 
-
+        // Dataset statistics
         double conflict_density();
+        double average_room_suitabilty();
+        double average_room_size();
+        double precedence_density();
+        double average_period_unavailability();
+        void statistics();
 };

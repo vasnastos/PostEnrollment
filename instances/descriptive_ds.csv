@@ -1,117 +1,117 @@
-instance,problem,category
-o01.tim,PE-CTT,TTCOMP-2002
-o02.tim,PE-CTT,TTCOMP-2002
-o03.tim,PE-CTT,TTCOMP-2002
-o04.tim,PE-CTT,TTCOMP-2002
-o05.tim,PE-CTT,TTCOMP-2002
-o06.tim,PE-CTT,TTCOMP-2002
-o07.tim,PE-CTT,TTCOMP-2002
-o08.tim,PE-CTT,TTCOMP-2002
-o09.tim,PE-CTT,TTCOMP-2002
-o10.tim,PE-CTT,TTCOMP-2002
-o11.tim,PE-CTT,TTCOMP-2002
-o12.tim,PE-CTT,TTCOMP-2002
-o13.tim,PE-CTT,TTCOMP-2002
-o14.tim,PE-CTT,TTCOMP-2002
-o15.tim,PE-CTT,TTCOMP-2002
-o16.tim,PE-CTT,TTCOMP-2002
-o17.tim,PE-CTT,TTCOMP-2002
-o18.tim,PE-CTT,TTCOMP-2002
-o19.tim,PE-CTT,TTCOMP-2002
-o20.tim,PE-CTT,TTCOMP-2002
-i01.tim,PE-CTT,ITC-2007
-i02.tim,PE-CTT,ITC-2007
-i03.tim,PE-CTT,ITC-2007
-i04.tim,PE-CTT,ITC-2007
-i05.tim,PE-CTT,ITC-2007
-i06.tim,PE-CTT,ITC-2007
-i07.tim,PE-CTT,ITC-2007
-i08.tim,PE-CTT,ITC-2007
-i09.tim,PE-CTT,ITC-2007
-i10.tim,PE-CTT,ITC-2007
-i11.tim,PE-CTT,ITC-2007
-i12.tim,PE-CTT,ITC-2007
-i13.tim,PE-CTT,ITC-2007
-i14.tim,PE-CTT,ITC-2007
-i15.tim,PE-CTT,ITC-2007
-i16.tim,PE-CTT,ITC-2007
-i17.tim,PE-CTT,ITC-2007
-i18.tim,PE-CTT,ITC-2007
-i19.tim,PE-CTT,ITC-2007
-i20.tim,PE-CTT,ITC-2007
-i21.tim,PE-CTT,ITC-2007
-i22.tim,PE-CTT,ITC-2007
-i23.tim,PE-CTT,ITC-2007
-i24.tim,PE-CTT,ITC-2007
-big_1.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_10.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_11.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_12.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_13.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_14.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_15.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_16.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_17.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_18.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_19.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_2.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_20.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_3.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_4.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_5.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_6.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_7.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_8.tim,PE-CTT,Harder-(Lewis and Paechter)
-big_9.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_1.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_10.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_11.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_12.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_13.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_14.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_15.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_16.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_17.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_18.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_19.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_2.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_20.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_3.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_4.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_5.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_6.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_7.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_8.tim,PE-CTT,Harder-(Lewis and Paechter)
-med_9.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_1.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_10.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_11.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_12.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_13.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_14.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_15.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_16.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_17.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_18.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_19.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_2.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_20.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_3.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_4.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_5.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_6.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_7.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_8.tim,PE-CTT,Harder-(Lewis and Paechter)
-small_9.tim,PE-CTT,Harder-(Lewis and Paechter)
-easy01.tim,PE-CTT,Metaheuristics Network
-easy02.tim,PE-CTT,Metaheuristics Network
-easy03.tim,PE-CTT,Metaheuristics Network
-easy04.tim,PE-CTT,Metaheuristics Network
-easy05.tim,PE-CTT,Metaheuristics Network
-hard01.tim,PE-CTT,Metaheuristics Network
-hard02.tim,PE-CTT,Metaheuristics Network
-medium01.tim,PE-CTT,Metaheuristics Network
-medium02.tim,PE-CTT,Metaheuristics Network
-medium03.tim,PE-CTT,Metaheuristics Network
-medium04.tim,PE-CTT,Metaheuristics Network
-medium05.tim,PE-CTT,Metaheuristics Network
+instance,category
+o01.tim,TTCOMP-2002
+o02.tim,TTCOMP-2002
+o03.tim,TTCOMP-2002
+o04.tim,TTCOMP-2002
+o05.tim,TTCOMP-2002
+o06.tim,TTCOMP-2002
+o07.tim,TTCOMP-2002
+o08.tim,TTCOMP-2002
+o09.tim,TTCOMP-2002
+o10.tim,TTCOMP-2002
+o11.tim,TTCOMP-2002
+o12.tim,TTCOMP-2002
+o13.tim,TTCOMP-2002
+o14.tim,TTCOMP-2002
+o15.tim,TTCOMP-2002
+o16.tim,TTCOMP-2002
+o17.tim,TTCOMP-2002
+o18.tim,TTCOMP-2002
+o19.tim,TTCOMP-2002
+o20.tim,TTCOMP-2002
+i01.tim,ITC-2007
+i02.tim,ITC-2007
+i03.tim,ITC-2007
+i04.tim,ITC-2007
+i05.tim,ITC-2007
+i06.tim,ITC-2007
+i07.tim,ITC-2007
+i08.tim,ITC-2007
+i09.tim,ITC-2007
+i10.tim,ITC-2007
+i11.tim,ITC-2007
+i12.tim,ITC-2007
+i13.tim,ITC-2007
+i14.tim,ITC-2007
+i15.tim,ITC-2007
+i16.tim,ITC-2007
+i17.tim,ITC-2007
+i18.tim,ITC-2007
+i19.tim,ITC-2007
+i20.tim,ITC-2007
+i21.tim,ITC-2007
+i22.tim,ITC-2007
+i23.tim,ITC-2007
+i24.tim,ITC-2007
+big_1.tim,Harder-(Lewis and Paechter)
+big_10.tim,Harder-(Lewis and Paechter)
+big_11.tim,Harder-(Lewis and Paechter)
+big_12.tim,Harder-(Lewis and Paechter)
+big_13.tim,Harder-(Lewis and Paechter)
+big_14.tim,Harder-(Lewis and Paechter)
+big_15.tim,Harder-(Lewis and Paechter)
+big_16.tim,Harder-(Lewis and Paechter)
+big_17.tim,Harder-(Lewis and Paechter)
+big_18.tim,Harder-(Lewis and Paechter)
+big_19.tim,Harder-(Lewis and Paechter)
+big_2.tim,Harder-(Lewis and Paechter)
+big_20.tim,Harder-(Lewis and Paechter)
+big_3.tim,Harder-(Lewis and Paechter)
+big_4.tim,Harder-(Lewis and Paechter)
+big_5.tim,Harder-(Lewis and Paechter)
+big_6.tim,Harder-(Lewis and Paechter)
+big_7.tim,Harder-(Lewis and Paechter)
+big_8.tim,Harder-(Lewis and Paechter)
+big_9.tim,Harder-(Lewis and Paechter)
+med_1.tim,Harder-(Lewis and Paechter)
+med_10.tim,Harder-(Lewis and Paechter)
+med_11.tim,Harder-(Lewis and Paechter)
+med_12.tim,Harder-(Lewis and Paechter)
+med_13.tim,Harder-(Lewis and Paechter)
+med_14.tim,Harder-(Lewis and Paechter)
+med_15.tim,Harder-(Lewis and Paechter)
+med_16.tim,Harder-(Lewis and Paechter)
+med_17.tim,Harder-(Lewis and Paechter)
+med_18.tim,Harder-(Lewis and Paechter)
+med_19.tim,Harder-(Lewis and Paechter)
+med_2.tim,Harder-(Lewis and Paechter)
+med_20.tim,Harder-(Lewis and Paechter)
+med_3.tim,Harder-(Lewis and Paechter)
+med_4.tim,Harder-(Lewis and Paechter)
+med_5.tim,Harder-(Lewis and Paechter)
+med_6.tim,Harder-(Lewis and Paechter)
+med_7.tim,Harder-(Lewis and Paechter)
+med_8.tim,Harder-(Lewis and Paechter)
+med_9.tim,Harder-(Lewis and Paechter)
+small_1.tim,Harder-(Lewis and Paechter)
+small_10.tim,Harder-(Lewis and Paechter)
+small_11.tim,Harder-(Lewis and Paechter)
+small_12.tim,Harder-(Lewis and Paechter)
+small_13.tim,Harder-(Lewis and Paechter)
+small_14.tim,Harder-(Lewis and Paechter)
+small_15.tim,Harder-(Lewis and Paechter)
+small_16.tim,Harder-(Lewis and Paechter)
+small_17.tim,Harder-(Lewis and Paechter)
+small_18.tim,Harder-(Lewis and Paechter)
+small_19.tim,Harder-(Lewis and Paechter)
+small_2.tim,Harder-(Lewis and Paechter)
+small_20.tim,Harder-(Lewis and Paechter)
+small_3.tim,Harder-(Lewis and Paechter)
+small_4.tim,Harder-(Lewis and Paechter)
+small_5.tim,Harder-(Lewis and Paechter)
+small_6.tim,Harder-(Lewis and Paechter)
+small_7.tim,Harder-(Lewis and Paechter)
+small_8.tim,Harder-(Lewis and Paechter)
+small_9.tim,Harder-(Lewis and Paechter)
+easy01.tim,Metaheuristics Network
+easy02.tim,Metaheuristics Network
+easy03.tim,Metaheuristics Network
+easy04.tim,Metaheuristics Network
+easy05.tim,Metaheuristics Network
+hard01.tim,Metaheuristics Network
+hard02.tim,Metaheuristics Network
+medium01.tim,Metaheuristics Network
+medium02.tim,Metaheuristics Network
+medium03.tim,Metaheuristics Network
+medium04.tim,Metaheuristics Network
+medium05.tim,Metaheuristics Network

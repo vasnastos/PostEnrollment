@@ -1,5 +1,11 @@
 #include "problem.hpp"
 
+int Event::no_students()
+{
+    return this->students.size();
+}
+
+
 string Problem::path_to_datasets="";
 
 string Problem::get_path(string filename)
@@ -38,7 +44,6 @@ void Problem::read(string filename,bool full_path)
 
     getline(fp,line_data);
     stringstream ss(line_data);
-    cout<<line_data<<endl;
     while(getline(ss,word,' '))
     {
         data.emplace_back(word);
@@ -120,6 +125,7 @@ void Problem::read(string filename,bool full_path)
                 }
             }
         }
+
         for(int eid=0;eid<this->E;eid++)
         {
             for(int eid2=0;eid2<this->E;eid2++)
@@ -237,4 +243,42 @@ double Problem::conflict_density()
 {
     // Graph density 2m/(N(N-1))
     return this->G.density();
+}
+
+double Problem::average_room_suitabilty()  //average suitable rooms per event
+{
+    return std::accumulate(this->event_available_rooms.begin(),this->event_available_rooms.end(),0.0,[&](double &s,const pair <int,vector <int>> &evr) {return s+evr.second.size();})/(this->E*1.0);
+}
+
+double Problem::average_room_size()
+{
+    return std::accumulate(this->rooms.begin(),this->rooms.end(),0.0,[&](double &s,const Room &r) {return s+r.capacity;})/static_cast<double>(this->R);
+}
+
+double Problem::precedence_density()
+{
+    if(DatasetDB::get_instance()->has_precedence_relation(this->id))
+    {
+        return (2.0*std::accumulate(this->precedence_events.begin(),this->precedence_events.end(),0.0,[&](double &s,const pair <int,vector <int>> &pre) {return s+pre.second.size();}))/(this->E*(this->E-1));
+    }
+    return 0;
+}
+
+double Problem::average_period_unavailability()
+{
+    if(DatasetDB::get_instance()->has_precedence_relation(this->id))
+    {
+        return std::accumulate(this->event_available_periods.begin(),this->event_available_periods.end(),0.0,[&](double s,const pair <int,vector <int>> &epr) {return s+this->P-epr.second.size();})/(this->P*this->E*1.0);
+    }
+    return 0;
+}
+
+void Problem::statistics()
+{
+    cout<<"Id:"<<this->id<<"("<<this->E<<","<<this->R<<","<<this->F<<","<<this->S<<")\t"<<"CD:"<<this->conflict_density()<<" RA:"<<this->average_room_suitabilty()<<" RS:"<<this->average_room_size();
+    if(DatasetDB::get_instance()->has_precedence_relation(this->id))
+    {
+        cout<<" PRD:"<<this->precedence_density()<<" PA:"<<this->average_period_unavailability();
+    }
+    cout<<endl;
 }

@@ -29,7 +29,7 @@ void Graph::add_edge(int &n1,int &n2,int &weight)
     }
 }
 
-vector <int> Graph::neighbors(int &n1)
+vector <int> Graph::neighbors(const int &n1)
 {   
     vector <int> nneighbors;
     if(this->neighborhood.find(n1)==this->neighborhood.end())
@@ -53,7 +53,7 @@ int Graph::get_weight(int &n1,int &n2)
     return this->neighborhood[n1][n2];
 }
 
-int Graph::density()
+double Graph::density()
 {
     return (2.0*this->edges.size())/(this->nodes.size()*(this->nodes.size()-1));
 }

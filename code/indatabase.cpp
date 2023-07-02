@@ -20,8 +20,14 @@ DatasetDB::DatasetDB()
             cerr<<"File did not open properly("<<path_to_registries.string()<<")"<<endl;
             return;
         }
+        bool header=true;
         while(getline(fp,line))
         {
+            if(header)
+            {
+                header=false;
+                continue;
+            }
             stringstream ss(line);
             data.clear();
             while(getline(ss,word,','))
@@ -29,7 +35,7 @@ DatasetDB::DatasetDB()
                 data.emplace_back(word);
             }
             if(data.size()!=2) continue;
-            this->instances[data[0]]=data[1];
+            this->instances[trim(data[0])]=trim(data[1]);
         }
         fp.close();
     }

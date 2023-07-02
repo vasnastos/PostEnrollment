@@ -28,7 +28,7 @@ class Arena
         {
             Problem *problem=new Problem;
             problem->read(filename);
-            cout<<problem->conflict_density()<<endl;
+            problem->statistics();
             delete problem;
         }
 
@@ -38,7 +38,7 @@ class Arena
             {
                 Problem *problem=new Problem;
                 problem->read(dataset,true);
-                cout<<problem->get_id()<<"\tCD:"<<problem->conflict_density()<<endl;
+                problem->statistics();
                 delete problem;
             }
         }
@@ -47,5 +47,5 @@ class Arena
 int main()
 {
     Arena arena;
-    arena.solve_all();
+    arena.entrance("i01.tim");
 }
