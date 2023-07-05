@@ -185,6 +185,12 @@ bool Solution::room_selection(map <int,Sol> &moves)
     return accumulate(moves.begin(),moves.end(),0,[&](const pair <int,Sol> &pr) {return pr.second.room!=-1;})==moves.size();
 }
 
+Problem* Solution::get_problem()const
+{
+    return this->problem;
+}
+
+// Operators description
 map <int,Sol> Solution::transfer()
 {
     map <int,Sol> moves;

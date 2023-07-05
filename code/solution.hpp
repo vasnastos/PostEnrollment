@@ -44,6 +44,9 @@ class Solution
         int select_random_event();
         bool room_selection(map <int,Sol> &moves);
 
+        Problem* get_problem()const;
+
+        // Operators
         map <int,Sol> transfer();
         map <int,Sol> swap();
         map <int,Sol> kempe_chain();
