@@ -4,6 +4,7 @@ mt19937 eng(high_resolution_clock::now().time_since_epoch().count());
 
 Solution::Solution(Problem *new_problem_instance):problem(new_problem_instance) {
     this->random_event.param(uniform_int_distribution<int>::param_type(0,new_problem_instance->E));
+    this->move_name=OPERATOR::NONE;
 }
 
 
@@ -72,9 +73,74 @@ size_t Solution::compute_cost()
 
 
 
-size_t Solution::compute_daily_cost()
+size_t Solution::compute_daily_cost(int day)
 {
+    int total_cost,no_periods;
+    int consecutive=0;
+    set <int> students_in_day;
+    vector <int> student_periods;
 
+    for(auto &[event_id,sol_item]:this->schedule_set)
+    {
+        if(sol_item.period>=day*this->problem->periods_per_day && sol_item.period<=day*this->problem->periods_per_day+this->problem->periods_per_day)
+        {
+            for(auto &student_id:this->problem->events[event_id].students)
+            {
+                students_in_day.insert(student_id);
+            }
+        }
+    }
+
+    // Compute the daily cost
+    for(auto &student_id:students_in_day)
+    {
+        student_periods.clear();
+        for(auto &event_id:this->problem->students[student_id])
+        {
+            student_periods.emplace_back(this->schedule_set[event_id].period);
+        } 
+
+        consecutive=0;
+        no_periods=0;
+
+        for(int period_id=day*this->problem->periods_per_day;period_id<day*this->problem->periods_per_day+this->problem->periods_per_day;period_id)
+        {
+            if(find(student_periods.begin(),student_periods.end(),period_id)!=student_periods.end())
+            {
+                consecutive++;
+                no_periods++;
+            }
+            else
+            {
+                if(consecutive>2)
+                {
+                    total_cost+=(consecutive-2);
+                }
+                consecutive=0;
+            }
+        }
+
+        if(no_periods==1)
+        {
+            total_cost++;
+        }
+        else
+        {
+            if(consecutive>2)
+            {
+                total_cost+=(consecutive-2);
+            }
+        }
+    }
+
+    for(int event_id=0;event_id<this->problem->E;event_id++)
+    {
+        if(this->schedule_set[event_id].period==day*this->problem->periods_per_day+this->problem->periods_per_day-1)
+        {
+            total_cost+=this->problem->events[event_id].no_students();
+        }
+    }
+    return total_cost;
 }
 
 void Solution::reposition(map <int,Sol> &moves)
@@ -358,4 +424,44 @@ map <int,Sol> Solution::double_kempe_chain()
         return kempe_chain_level1;
     }
     return map <int,Sol>();
+}
+
+map <int,Sol> Solution::kick_event()
+{
+    int event1=this->select_random_event();
+    int event2=this->select_random_event();
+    map <int,Sol> moves;
+    if(this->can_be_moved(event1,this->schedule_set[event2].period,{event2}))
+    {
+        moves[event1]=Sol(this->schedule_set[event2].period,-1);
+    }
+
+    if(moves.find(event1)==moves.end())
+    {
+        return map <int,Sol>();
+    }
+
+    for(int period_id=0;period_id<this->problem->P;period_id++)
+    {
+        if(this->can_be_moved(event2,period_id))
+        {
+            moves[event2]=Sol(period_id,-1);
+        }
+    }
+
+    if(moves.find(event2)==moves.end())
+    {
+        return map <int,Sol>();
+    }
+
+    if(this->room_selection(moves))
+    {
+        return moves;
+    }
+    return map <int,Sol>();
+}
+
+map <int,Sol> Solution::double_kick_event()
+{
+
 }

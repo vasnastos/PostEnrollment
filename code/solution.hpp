@@ -11,6 +11,17 @@ struct Sol
     Sol(int _p,int _r):period(_p),room(_r) {}
 };
 
+enum class OPERATOR
+{
+    TRANSFER,
+    SWAP,
+    KEMPE,
+    DOUBLE_KEMPE,
+    KICK,
+    DOUBLE_KICK,
+    NONE
+};
+
 class Solution
 {
     private:
@@ -27,11 +38,14 @@ class Solution
 
         void build_double_kempe_chain(const int &event_id,map <int,Sol> &moves);
 
+        // For the solution procedure
+        OPERATOR move_name;
+
     public:
         Solution(Problem *new_problem_instance);
 
         size_t compute_cost();
-        size_t compute_daily_cost();
+        size_t compute_daily_cost(int day);
 
         void reposition(map <int,Sol> &moves);
         void rollback();    
@@ -47,8 +61,13 @@ class Solution
         Problem* get_problem()const;
 
         // Operators
+
+        map <int,Sol> select_random_move();
+
         map <int,Sol> transfer();
         map <int,Sol> swap();
         map <int,Sol> kempe_chain();
         map <int,Sol> double_kempe_chain();
+        map <int,Sol> kick_event();
+        map <int,Sol> double_kick_event();
 };
