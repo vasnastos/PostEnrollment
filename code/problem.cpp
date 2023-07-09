@@ -282,3 +282,18 @@ void Problem::statistics()
     }
     cout<<endl;
 }
+
+int Problem::clash(const int &event_id)
+{
+    return this->G.neighbors(event_id).size();
+}
+
+int Problem::sum_clash()
+{
+    int ts=0;
+    for(int event_id=0;event_id<this->E;event_id++)
+    {
+        ts+=this->clash(event_id);
+    }
+    return ts;
+}

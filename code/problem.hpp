@@ -68,4 +68,10 @@ class Problem
         double precedence_density();
         double average_period_unavailability();
         void statistics();
+
+
+        // Extra functions for the TSSP
+        int clash(const int &event_id);
+        int sum_clash();
+
 };

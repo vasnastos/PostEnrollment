@@ -1,4 +1,4 @@
-#include "problem.hpp"
+#include "tabu_search.hpp"
 
 
 class Arena
@@ -39,7 +39,14 @@ class Arena
                 Problem *problem=new Problem;
                 problem->read(dataset,true);
                 problem->statistics();
+
+                Solution *solution=new Solution(problem);
+
+                TSSP tabu_search(solution,190);
+                tabu_search.solve();
+
                 delete problem;
+                delete solution;
             }
         }
 };
@@ -47,5 +54,5 @@ class Arena
 int main()
 {
     Arena arena;
-    arena.entrance("i01.tim");
+    arena.solve_all();
 }

@@ -42,13 +42,17 @@ class Solution
         OPERATOR move_name;
 
     public:
+        mt19937 eng;
+
         Solution(Problem *new_problem_instance);
 
         size_t compute_cost();
         size_t compute_daily_cost(int day);
+        string get_named_move();
 
         void reposition(map <int,Sol> &moves);
-        void rollback();    
+        void rollback();   
+        void set_solution(map <int,Sol> &moves); 
 
         void schedule(const int &pevent,const int &room,const int &period);
         void unschedule(const int &event);
@@ -56,8 +60,8 @@ class Solution
         bool room_availability(const int &event_id,const int &period,const int &room,const vector <int> &excluded={});
 
         int select_random_event();
+        int select_random_neighbor(const int &neighbor_id);
         bool room_selection(map <int,Sol> &moves);
-
         Problem* get_problem()const;
 
         // Operators

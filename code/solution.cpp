@@ -1,10 +1,9 @@
 #include "solution.hpp"
 
-mt19937 eng(high_resolution_clock::now().time_since_epoch().count());
-
 Solution::Solution(Problem *new_problem_instance):problem(new_problem_instance) {
     this->random_event.param(uniform_int_distribution<int>::param_type(0,new_problem_instance->E));
     this->move_name=OPERATOR::NONE;
+    this->eng=mt19937(high_resolution_clock::now().time_since_epoch().count());
 }
 
 
@@ -221,6 +220,14 @@ int Solution::select_random_event()
     return this->random_event(eng);
 }
 
+int Solution::select_random_neighbor(const int &neighbor_id)
+{
+    auto eneighbors=this->problem->G.neighbors(neighbor_id);
+    uniform_int_distribution <int> random_selector(0,eneighbors.size()-1);
+
+    return eneighbors.at(random_selector(eng));
+}
+
 bool Solution::room_selection(map <int,Sol> &moves)
 {
     vector <pair <int,int>> captured;
@@ -256,7 +263,77 @@ Problem* Solution::get_problem()const
     return this->problem;
 }
 
+
+void Solution::set_solution(map <int,Sol> &moves)
+{
+    this->schedule_set=moves;
+}
+
+//----------------------------------------------------------------------------------
 // Operators description
+
+map <int,Sol> Solution::select_random_move()
+{
+    uniform_int_distribution <int> rand_choice(1,6);
+    int choice=rand_choice(eng);
+    switch(choice)
+    {
+        case 1:
+            this->move_name=OPERATOR::TRANSFER;
+            return this->transfer();
+            break;
+        case 2:
+            this->move_name=OPERATOR::SWAP;
+            this->swap();
+            break;
+        case 3:
+            this->move_name=OPERATOR::KEMPE;
+            this->kempe_chain();
+            break;
+        case 4:
+            this->move_name=OPERATOR::DOUBLE_KEMPE;
+            this->double_kempe_chain();
+            break;
+        case 5:
+            this->move_name=OPERATOR::KICK;
+            this->kick_event();
+            break;
+        case 6:
+            this->move_name=OPERATOR::DOUBLE_KICK;
+            this->double_kick_event();
+            break;
+    }
+}
+
+string Solution::get_named_move()
+{
+    switch(this->move_name)
+    {
+        case OPERATOR::TRANSFER:
+            return "Transfer Event(TE)";
+            break;
+        case OPERATOR::SWAP:
+            return "Swap Event(SE)";
+            break;
+        case OPERATOR::KEMPE:
+            return "Kempe Chain(KC)";
+            break;
+        case OPERATOR::DOUBLE_KEMPE:
+            return "Double Kempe Chain(DKC)";
+            break;
+        case OPERATOR::KICK:
+            return "Kick Event(KE)";
+            break;
+        case OPERATOR::DOUBLE_KICK:
+            return "Double Kick Event(DKE)";
+            break;
+        default:
+            return "None";
+            break;
+    }
+
+}
+
 map <int,Sol> Solution::transfer()
 {
     map <int,Sol> moves;
@@ -463,5 +540,57 @@ map <int,Sol> Solution::kick_event()
 
 map <int,Sol> Solution::double_kick_event()
 {
+    int event_id1=this->select_random_event();
+    auto eneighbors=this->problem->G.neighbors(event_id1);
+    bool available_solution_found;
+    vector <int> eneighbors2;
+    map <int,Sol> moves;
+    for(const auto &event_id2:eneighbors)
+    {
+        available_solution_found=false;
+        if(this->can_be_moved(event_id1,this->schedule_set[event_id2].period,{event_id2}))
+        {
+            eneighbors2=this->problem->G.neighbors(event_id2);
+            for(const auto &event_id3:eneighbors2)
+            {
+                if(this->can_be_moved(event_id2,this->schedule_set[event_id3].period,{event_id3}))
+                {
+                    for(int period_id=0;period_id<this->problem->P;period_id++)
+                    {
+                        if(period_id==this->schedule_set[event_id2].period || period_id==this->schedule_set[event_id3].period)
+                        {
+                            continue;
+                        }
+                        if(this->can_be_moved(event_id3,period_id))
+                        {
+                            available_solution_found=true;
+                            moves[event_id1]=Sol(this->schedule_set[event_id2].period,-1);
+                            moves[event_id2]=Sol(this->schedule_set[event_id3].period,-1);
+                            moves[event_id3]=Sol(period_id,-1);
+                        }
 
+                        if(available_solution_found)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if(available_solution_found)
+            {
+                break;
+            }
+        }
+    }
+
+    if(!moves.empty())
+    {
+        if(this->room_selection(moves))
+        {
+            return moves;
+        }
+    }
+
+    return map <int,Sol>();
 }
