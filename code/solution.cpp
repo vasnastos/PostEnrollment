@@ -284,23 +284,23 @@ map <int,Sol> Solution::select_random_move()
             break;
         case 2:
             this->move_name=OPERATOR::SWAP;
-            this->swap();
+            return this->swap();
             break;
         case 3:
             this->move_name=OPERATOR::KEMPE;
-            this->kempe_chain();
+            return this->kempe_chain();
             break;
         case 4:
             this->move_name=OPERATOR::DOUBLE_KEMPE;
-            this->double_kempe_chain();
+            return this->double_kempe_chain();
             break;
         case 5:
             this->move_name=OPERATOR::KICK;
-            this->kick_event();
+            return this->kick_event();
             break;
         case 6:
             this->move_name=OPERATOR::DOUBLE_KICK;
-            this->double_kick_event();
+            return this->double_kick_event();
             break;
     }
 }
@@ -593,4 +593,9 @@ map <int,Sol> Solution::double_kick_event()
     }
 
     return map <int,Sol>();
+}
+
+map <int,Sol> Solution::get_schedule()
+{
+    return this->schedule_set;
 }

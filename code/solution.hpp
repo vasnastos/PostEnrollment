@@ -74,4 +74,6 @@ class Solution
         map <int,Sol> double_kempe_chain();
         map <int,Sol> kick_event();
         map <int,Sol> double_kick_event();
+
+        map <int,Sol> get_schedule();
 };

@@ -12,7 +12,7 @@ class TSSP
         vector <map <int,int>> tabulist;
         int best_cost;
 
-        std::chrono::_V2::system_clock::time_point start_timer;
+        std::chrono::time_point<chrono::high_resolution_clock> start_timer;
 
         bool define_tabu(vector <int> &confe);
         double objective_function(vector <int> &unplaced_events);
