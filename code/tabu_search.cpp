@@ -1,10 +1,11 @@
 #include "tabu_search.hpp"
 
 
-TSSP::TSSP(Solution *sol_item,size_t solution_time):solution(sol_item),elapsed_time(solution_time)
+TSSP::TSSP(Solution *sol_item,size_t solution_time_in_seconds):solution(sol_item),elapsed_time(solution_time_in_seconds)
 {
     for(int event_id=0,t=this->solution->get_problem()->E;event_id<t;event_id++)
     {
+        // Initialize best_solution and unassigned events data structure
         this->unassigned_events.emplace_back(event_id);
         this->best_solution[event_id]=Sol(-1,-1);
     }

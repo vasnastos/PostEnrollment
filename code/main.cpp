@@ -1,58 +1,35 @@
 #include "tabu_search.hpp"
 
 
-class Arena
-{   
-    vector <string> datasets;
-    public:
-        Arena()
-        {
-            if(Problem::path_to_datasets=="")
-            {
-                fs::path pth;
-                for(const string &x:{"..","instances"})
-                {
-                    pth.append(x);
-                }
-                Problem::path_to_datasets=pth.string();
-            }
+void scenario1()
+{
+    /*
+        Find an initial solution using tabu search
+        3 classes are used
+        - Problem
+        - Solution
+        - TabuSearch
+    */
+    string filename="i01.tim";
+    Problem problem;
+    problem.read(filename);
+    Solution solution(&problem);
+    TSSP tabu_search(&solution,190);
+    tabu_search.solve();
+    auto solution_map=tabu_search.get_best_solution();
+    if(solution_map.empty())
+    {
+        cout<<"Solution for filename:"<<filename<<endl<<" does not been found by tabu search"<<endl;
+    }
+    else
+    {
+        cout<<"Solution found for "<<filename<<" instance"<<endl;
+    }
+}
 
-            for(auto &entry:fs::directory_iterator(fs::path(Problem::path_to_datasets)))
-            {
-                if(endsWith(entry.path().string(),".tim"))
-                datasets.emplace_back(entry.path().string());
-            }
-        }
-
-        void entrance(string filename)
-        {
-            Problem *problem=new Problem;
-            problem->read(filename);
-            problem->statistics();
-            delete problem;
-        }
-
-        void solve_all()
-        {
-            for(const auto &dataset:datasets)
-            {
-                Problem *problem=new Problem;
-                problem->read(dataset,true);
-                problem->statistics();
-
-                Solution *solution=new Solution(problem);
-
-                TSSP tabu_search(solution,190);
-                tabu_search.solve();
-
-                delete problem;
-                delete solution;
-            }
-        }
-};
 
 int main()
 {
-    Arena arena;
-    arena.solve_all();
+    scenario1();
+    return 0;
 }

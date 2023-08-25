@@ -1,6 +1,5 @@
 #include "solution.hpp"
 
-
 class TSSP
 {
     private:
@@ -22,7 +21,7 @@ class TSSP
 
 
     public:
-        TSSP(Solution *sol_item,size_t solution_time);
+        TSSP(Solution *sol_item,size_t solution_time_in_seconds);
         void solve();
         map <int,Sol> get_best_solution();
 };

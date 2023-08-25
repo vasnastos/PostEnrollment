@@ -65,7 +65,6 @@ class Solution
         Problem* get_problem()const;
 
         // Operators
-
         map <int,Sol> select_random_move();
 
         map <int,Sol> transfer();
