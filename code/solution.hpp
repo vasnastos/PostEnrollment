@@ -8,7 +8,8 @@ struct Sol
 {
     int period;
     int room;
-    Sol(int _p,int _r):period(_p),room(_r) {}
+    Sol();
+    Sol(int _p,int _r);
 };
 
 enum class OPERATOR
@@ -30,6 +31,7 @@ class Solution
         map <int,vector <int>> periodwise_solutions;
         map <int,vector <int>> roomwise_solutions;
         map <int,Sol> memory;
+        map <OPERATOR,int> move_usage;
 
 
         // secondary attributes
@@ -65,7 +67,10 @@ class Solution
         Problem* get_problem()const;
 
         // Operators
-        map <int,Sol> select_random_move();
+        map <int,Sol> select_numbered_operator(OPERATOR op);
+        map <int,Sol> select_random_operator();
+        map <int,Sol> select_operator_based_on_precedence();
+        map <int,Sol> select_operator();
 
         map <int,Sol> transfer();
         map <int,Sol> swap();

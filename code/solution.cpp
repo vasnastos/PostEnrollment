@@ -1,9 +1,20 @@
 #include "solution.hpp"
 
+Sol::Sol() {}
+
+Sol::Sol(int _p,int _r):period(_p),room(_r) {}
+
 Solution::Solution(Problem *new_problem_instance):problem(new_problem_instance) {
     this->random_event.param(uniform_int_distribution<int>::param_type(0,new_problem_instance->E));
     this->move_name=OPERATOR::NONE;
     this->eng=mt19937(high_resolution_clock::now().time_since_epoch().count());
+
+    this->move_usage[OPERATOR::TRANSFER]=0;
+    this->move_usage[OPERATOR::SWAP]=0;
+    this->move_usage[OPERATOR::KICK]=0;
+    this->move_usage[OPERATOR::DOUBLE_KICK]=0;
+    this->move_usage[OPERATOR::KEMPE]=0;
+    this->move_usage[OPERATOR::DOUBLE_KICK]=0;
 }
 
 
@@ -178,7 +189,7 @@ void Solution::unschedule(const int &event)
     // calculate partial cost
 }
 
-bool Solution::can_be_moved(const int &event_id,const int &period_id,const vector <int> &excluded={})
+bool Solution::can_be_moved(const int &event_id,const int &period_id,const vector <int> &excluded)
 {
     vector <int> eneighbors=this->problem->G.neighbors(event_id);
     for(auto &neighbor_event_id:eneighbors)
@@ -255,7 +266,7 @@ bool Solution::room_selection(map <int,Sol> &moves)
         }
     }
 
-    return accumulate(moves.begin(),moves.end(),0,[&](const pair <int,Sol> &pr) {return pr.second.room!=-1;})==moves.size();
+    return accumulate(moves.begin(),moves.end(),0,[&](int s,const pair <int,Sol> &pr) {return s+pr.second.room!=-1;})==moves.size();
 }
 
 Problem* Solution::get_problem()const
@@ -272,7 +283,7 @@ void Solution::set_solution(map <int,Sol> &moves)
 //----------------------------------------------------------------------------------
 // Operators description
 
-map <int,Sol> Solution::select_random_move()
+map <int,Sol> Solution::select_random_operator()
 {
     uniform_int_distribution <int> rand_choice(1,6);
     int choice=rand_choice(eng);
@@ -280,29 +291,107 @@ map <int,Sol> Solution::select_random_move()
     {
         case 1:
             this->move_name=OPERATOR::TRANSFER;
+            this->move_usage[OPERATOR::TRANSFER]++;
             return this->transfer();
             break;
         case 2:
             this->move_name=OPERATOR::SWAP;
+            this->move_usage[OPERATOR::SWAP]++;
             return this->swap();
             break;
         case 3:
             this->move_name=OPERATOR::KEMPE;
+            this->move_usage[OPERATOR::KEMPE]++;
             return this->kempe_chain();
             break;
         case 4:
             this->move_name=OPERATOR::DOUBLE_KEMPE;
+            this->move_usage[OPERATOR::DOUBLE_KEMPE]++;
             return this->double_kempe_chain();
             break;
         case 5:
             this->move_name=OPERATOR::KICK;
+            this->move_usage[OPERATOR::KICK]++;
             return this->kick_event();
             break;
         case 6:
             this->move_name=OPERATOR::DOUBLE_KICK;
+            this->move_usage[OPERATOR::DOUBLE_KICK]++;
             return this->double_kick_event();
             break;
+        default:
+            return map <int,Sol>();
+            break;
     }
+}
+
+map <int,Sol> Solution::select_numbered_operator(OPERATOR op)
+{
+    switch(op)
+    {
+        case OPERATOR::TRANSFER:
+            this->move_name=OPERATOR::TRANSFER;
+            this->move_usage[OPERATOR::TRANSFER]++;
+            return this->transfer();
+            break;
+        case OPERATOR::SWAP:
+            this->move_name=OPERATOR::SWAP;
+            this->move_usage[OPERATOR::SWAP]++;
+            return this->swap();
+            break;
+        case OPERATOR::KEMPE:
+            this->move_name=OPERATOR::KEMPE;
+            this->move_usage[OPERATOR::KEMPE]++;
+            return this->kempe_chain();
+            break;
+        case OPERATOR::DOUBLE_KEMPE:
+            this->move_name=OPERATOR::DOUBLE_KEMPE;
+            this->move_usage[OPERATOR::DOUBLE_KEMPE]++;
+            return this->double_kempe_chain();
+            break;
+        case OPERATOR::KICK:
+            this->move_name=OPERATOR::KICK;
+            this->move_usage[OPERATOR::KICK]++;
+            return this->kick_event();
+            break;
+        case OPERATOR::DOUBLE_KICK:
+            this->move_name=OPERATOR::DOUBLE_KICK;
+            this->move_usage[OPERATOR::DOUBLE_KICK]++;
+            return this->double_kick_event();
+            break;
+        default:
+            return map <int,Sol>();
+            break;
+    }
+}
+
+map <int,Sol> Solution::select_operator_based_on_precedence()
+{
+    map <OPERATOR,int> moves_precentage;
+    auto total_moves_made=static_cast<double>(accumulate(this->move_usage.begin(),this->move_usage.end(),0,[&](int &s,const pair <OPERATOR,int> &pr) {return s+pr.second;}));
+    double starter_point=0.0;
+    
+    for(auto &[move_operator,move_counter]:this->move_usage)
+    {
+        moves_precentage=starter_point+move_counter*100.0/total_moves_made;
+        starter_point=moves_precentage;
+    }
+    uniform_real_distribution <double> random_event_selector;
+    double random_possibility=random_event_selector(this->eng);
+    OPERATOR op=OPERATOR::NONE;
+    for(auto &[move_operator,move_percentance]:moves_percentance)
+    {
+        if(random_possibility<=moves_precentage)
+        {
+            op=move_operator;
+        }
+    }
+    return this->select_numbered_operator(op);
+}
+
+map <int,Sol> Solution::select_operator()
+{
+
 }
 
 string Solution::get_named_move()
@@ -450,7 +539,6 @@ void Solution::build_double_kempe_chain(const int &event_id,map <int,Sol> &moves
     };
 
     int current_event,kempe_period,update_period;
-    vector <int> eneighbors;
     kc.push(event_id);
     map <int,Sol> secondary_moves_map;
 
